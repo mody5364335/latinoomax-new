@@ -322,15 +322,18 @@ function Menu({ data }) {
         (a.featuredPriority ?? a.priority) - (b.featuredPriority ?? b.priority),
     );
   const [offerIndex, setOfferIndex] = useState(0);
-  const offerIndexRef = useRef(0), offerPaused = useRef(false);
-  const [autoOffers, setAutoOffers] = useState(true);
+  const offerIndexRef = useRef(0), offerHolding = useRef(false);
+  const offerNextAt = useRef(Date.now() + 6000);
+  function pauseOffers() { offerNextAt.current = Date.now() + 5000; }
+  function holdOffers() { offerHolding.current = true; pauseOffers(); }
+  function releaseOffers() { if (offerHolding.current) { offerHolding.current = false; pauseOffers(); } }
   function goOffer(index, smooth = true) {
     const track = featureTrack.current;
     if (!track || !featured.length) return;
     const next = (index + featured.length) % featured.length;
     const card = track.children[next];
     const a = card.getBoundingClientRect(), b = track.getBoundingClientRect();
-    track.scrollBy({left: a.left - b.left - (b.width - a.width) / 2, behavior: smooth ? "smooth" : "instant"});
+    track.scrollBy({left: a.left - b.left - (b.width - a.width) / 2, behavior: smooth && !matchMedia("(prefers-reduced-motion: reduce)").matches ? "smooth" : "instant"});
     offerIndexRef.current = next; setOfferIndex(next);
   }
   function syncOffer() {
@@ -342,12 +345,23 @@ function Menu({ data }) {
     offerIndexRef.current = best; setOfferIndex(best);
   }
   useEffect(() => {
-    const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+    // Keep regular rotation at six seconds; each interaction gives five seconds to read.
+    offerNextAt.current = Date.now() + 6000;
+    const release = () => releaseOffers();
+    window.addEventListener("pointerup", release);
+    window.addEventListener("pointercancel", release);
     const timer = setInterval(() => {
-      if (autoOffers && !reduced.matches && !offerPaused.current && !document.hidden && !document.querySelector("dialog[open]")) goOffer(offerIndexRef.current + 1);
-    }, 6000);
-    return () => clearInterval(timer);
-  }, [autoOffers, featured.length]);
+      if (offerHolding.current || document.hidden || document.querySelector("dialog[open]")) {
+        offerNextAt.current = Date.now() + 5000;
+        return;
+      }
+      if (Date.now() >= offerNextAt.current) {
+        goOffer(offerIndexRef.current + 1);
+        offerNextAt.current = Date.now() + 6000;
+      }
+    }, 100);
+    return () => { clearInterval(timer); window.removeEventListener("pointerup", release); window.removeEventListener("pointercancel", release); };
+  }, [featured.length]);
   function details(i) {
     setSelected(i);
     setExtra([]);
@@ -452,7 +466,10 @@ function Menu({ data }) {
           </div>
         )}
         {s.featuredEnabled && featured.length > 0 && (
-          <section className="featured" aria-label="اختيارات مميزة">
+          <section className="featured" aria-label="اختيارات مميزة"
+            onPointerDownCapture={holdOffers} onPointerUpCapture={releaseOffers}
+            onPointerCancelCapture={releaseOffers} onWheelCapture={pauseOffers}
+            onKeyDownCapture={pauseOffers} onClickCapture={pauseOffers}>
             <div className="section-head">
               <div>
                 <p className="eyebrow">اختيارات لاتينو</p>
@@ -476,10 +493,7 @@ function Menu({ data }) {
                 </button>
               </div>
             </div>
-            <div className="feature-track" ref={featureTrack} onScroll={syncOffer}
-              onMouseEnter={() => {offerPaused.current=true}} onMouseLeave={() => {offerPaused.current=false}}
-              onTouchStart={() => {offerPaused.current=true}} onTouchEnd={() => {offerPaused.current=false}}
-              onFocusCapture={() => {offerPaused.current=true}} onBlurCapture={() => {offerPaused.current=false}}>
+            <div className="feature-track" ref={featureTrack} onScroll={syncOffer}>
               {featured.map((i) => (
                 <button
                   className="feature-card"
@@ -504,7 +518,6 @@ function Menu({ data }) {
             </div>
             <div className="offer-pagination" aria-label="موضع العرض">
               <div className="offer-bars">{featured.map((item,index) => <button key={item.id} className={offerIndex === index ? "current" : ""} aria-label={`العرض ${index+1} من ${featured.length}`} aria-current={offerIndex === index ? "true" : undefined} onClick={() => goOffer(index)} />)}</div>
-              <button className="offer-auto" onClick={() => setAutoOffers(v => !v)} aria-label={autoOffers ? "إيقاف تقليب العروض" : "تشغيل تقليب العروض"}>{autoOffers ? "إيقاف مؤقت" : "تشغيل"}</button>
             </div>
           </section>
         )}
