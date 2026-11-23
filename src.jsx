@@ -594,7 +594,7 @@ function Menu({ data }) {
               </div>
               <div className="grid">
                 {filtered.slice(0, count).map((i) => (
-                  <article className="card" key={i.id}>
+                  <article className="card" key={i.id} onClick={() => details(i)}>
                     <button
                       className="card-photo"
                       aria-label={"تفاصيل " + i.name}
