@@ -28,8 +28,8 @@ The packaging script generates root `index.html` and `admin.html` with React, st
 - Delivery enabled; dine-in disabled by default.
 - Name, address and contact phone are required by default; notes are optional.
 - WhatsApp draft includes order type, customer details, item names, quantities, base prices, separately priced add-ons, unit totals and line totals, the order total, notes and a final delivery-fee disclaimer.
-- Receiving number is the owner's approved `201040580225`.
-- WhatsApp cannot confirm whether the visitor actually pressed Send. The cart clears on successful opening of the WhatsApp window, not on a delivery receipt. The page explains this. If the popup is blocked, the cart is retained.
+- Current WhatsApp order destination: `201040580225`.
+- On a valid order-button click the cart clears immediately, even when WhatsApp fails to open. WhatsApp does not confirm sending or receipt. Customers still need to press Send in WhatsApp.
 - Customer details are not stored or sent to a backend; only the current cart is stored locally. The visitor must press Send in WhatsApp.
 
 ## Local admin
@@ -52,3 +52,9 @@ Changes are drafts in that browser only. Export `items.json` and replace the rep
 ## External dependencies
 
 React is bundled, not fetched at runtime. Photos depend on the existing Foodics image host. Cairo font loads from Google Fonts with local fallback fonts. Excel tools load SheetJS from jsDelivr on demand; JSON import/export works without SheetJS.
+
+## Contact section and brand
+
+The header uses the supplied cropped logo. Featured offers support horizontal swipe, arrow controls and card interactions. Search always covers the full menu while text is entered; clearing it returns to the chosen category.
+
+The contact section has one editable branch with three phone rows with the supplied place name, address and repeated phone number. Edit, add, remove or hide entries from interface settings. JSON and Excel Settings exports preserve branch data. Contact buttons open a phone call or WhatsApp chat; they do not send a message.
