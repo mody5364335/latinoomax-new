@@ -1,96 +1,54 @@
-# LATINOO MAX menu
+# LATINOO MAX, React + Vite
 
-Arabic, RTL, mobile-first restaurant menu. Static HTML/CSS/JavaScript, with no build step and no paid services.
+Arabic RTL restaurant menu, built with React 18 and Vite. All 494 original items and 45 categories remain in `items.json` with their original names, categories and prices. Product images use the existing Foodics URLs; some are category photos.
 
-## Run locally
+## Development and build
 
-From this folder:
+Requires Node 22.12+.
 
 ```sh
+npm ci
+npm run dev
+```
+
+Open `/app.html` during development, or `/app.html?preview=1` to preview a local draft. For the admin during development use the production admin.html, or serve the packaged output as below.
+
+```sh
+npm run build
+node package-build.mjs
 python3 -m http.server 8080
 ```
 
-Open `http://localhost:8080`. Do not open the HTML file directly: the menu loads `items.json` with fetch. Production should use HTTPS, for example GitHub Pages.
+The packaging script generates root `index.html` and `admin.html` with React, styles and JavaScript bundled inside. GitHub Pages currently serves these committed production files from main/root, so no additional paid service is needed. After source changes, rebuild, package and commit both generated HTML files. Menu/settings changes need only `items.json`, no build.
 
-## Menu source
+## Menu and checkout
 
-`items.json` is the single published source of truth. It contains all 494 rows and all 45 categories from the supplied `menu-source.xlsx`. Names, prices and categories are unchanged. Prices are EGP. Pizza sizes are kept in their original categories and names, rather than inventing variants.
+- Search, categories, product details and optional suggested add-ons.
+- Cart quantities, removal, totals and local reload persistence.
+- Delivery enabled; dine-in disabled by default.
+- Name, address and contact phone are required by default; notes are optional.
+- WhatsApp draft includes order type, customer details, item names, quantities, base prices, separately priced add-ons, unit totals and line totals, the order total, notes and a final delivery-fee disclaimer.
+- Receiving number is the owner's approved `201040580225`.
+- WhatsApp cannot confirm whether the visitor actually pressed Send. The cart clears on successful opening of the WhatsApp window, not on a delivery receipt. The page explains this. If the popup is blocked, the cart is retained.
+- Customer details are not stored or sent to a backend; only the current cart is stored locally. The visitor must press Send in WhatsApp.
 
-Images use URLs from the restaurant's public Foodics menu feed. They depend on those external image hosts remaining available. Where an item did not have its own image, its category image is used. Category photos are illustrative, not a claim that every item looks identical. Some items appear in multiple source categories: IDs were made unique without dropping either row.
+## Local admin
 
-Source feed: https://cdn.getsolo.io/apps/production/yXKSWI12HUp-menu-8457.json
-Menu: https://latinoo-max.foodics.online/menu/
+Open `admin.html`. On first use choose a local username and unique password of at least 10 characters. Existing local editor credentials and drafts use the same storage keys as the preceding version. No default password, token or shared account is committed.
 
-The editor exports an editable Excel workbook with stable IDs, image paths, availability, offer flags, display priority and suggested add-on IDs. An offline project ZIP also includes the original source workbook.
+This gate is only a local convenience, not server-side authentication. It does not protect public data or grant publishing rights. Only repository collaborators can publish changes. Do not store customer records or secrets in the editor.
 
-## Admin / local editor
+- Add, edit, remove, hide and reorder products.
+- Edit category, name, variant, description, price, image URL or a small uploaded image.
+- Select suggested add-ons. Empty selections use automatic suggestions.
+- Mark an item as an offer independently from featuring it above the hero.
+- Feature any menu item, customize its card title, badge and priority. Existing offer flags are featured until explicitly changed.
+- Configure the featured section, hero copy and brand.
+- Configure delivery and dine-in availability and labels, field labels and requiredness, notes visibility, WhatsApp title/number, final delivery disclaimer, and cart-clear behavior.
+- JSON and Excel import/export, draft preview and restore published data. Excel export includes `Menu` and `Settings` sheets. JSON preserves the full data structure.
 
-Open `/admin.html` relative to the site root. For a project site this is `/<repository>/admin.html`.
+Changes are drafts in that browser only. Export `items.json` and replace the repository's root `items.json` to publish. Preview uses `?preview=1`, which only shows the local draft on that browser. Normal visitors always see the published JSON. A real shared admin and automatic publishing still require a backend.
 
-On first use, choose a username and a unique local password of at least 10 characters. There is no default password, server account, shared admin account or credential committed to this repository. The browser stores a salted PBKDF2 hash, not the password. The editor locks again on refresh.
+## External dependencies
 
-**This is not server-side authentication.** The gate only discourages casual editing on that browser. Anyone can create their own local editor. Only someone authorized on the GitHub repository can change the published menu. Do not use the editor to store private information or reuse an important password.
-
-Features:
-
-- Add, edit and delete products and categories.
-- Set the price, description, variant and within-category display priority. A lower number sorts first.
-- Toggle availability without deleting a product.
-- Mark any item as an offer. Products from the original offer category are marked as offers initially. Unchecking the offer flag removes them from the Offers filter.
-- Use an HTTPS image URL or upload a PNG/JPG/WebP up to 500 KB. Uploads are embedded into the exported JSON.
-- Choose specific add-on recommendations, or leave them empty for category-based suggestions. Suggestions use actual existing menu items and prices. They are not allergy or dietary guarantees.
-- Import/export Excel and JSON. Import replaces the product list after confirmation. Back up first.
-- Preview the local draft without changing the published menu.
-
-Drafts and the lock live only in this browser's local storage. Other devices do not see them. Clearing site storage deletes them. Export backups regularly. Local storage has a limited capacity; if many uploaded images fill it, the editor displays a warning. Use image URLs or export your JSON immediately.
-
-### Publishing edits
-
-1. Save edits in the local editor.
-2. Export `items.json` and optionally an Excel backup.
-3. Sign in to the GitHub account authorized to edit this repository.
-4. Choose **Add file > Upload files**, upload the new `items.json` to the repository root, and commit the change.
-5. Wait for the Pages deployment to finish. Reload the normal menu URL without `?preview=1` and verify the result.
-
-The export does not publish itself. No GitHub access tokens are collected, stored or exposed by the website.
-
-For true shared admin login, server-side authorization and immediate cross-device publishing, migrate to a backend with authenticated writes and media storage. The current data format can be reused.
-
-### Spreadsheet workflow
-
-The editor accepts the original workbook columns: `Category`, `Item`, `Description`, `Size/Variant`, `Price`, `Currency`. Its exported workbook additionally includes `ID`, `Image`, `Priority`, `Available`, `Offer`, `Addon IDs`. Keep IDs unchanged when editing. Add-on IDs are comma separated. Prices must be nonnegative numbers.
-
-Optional Python conversion:
-
-```sh
-pip install openpyxl
-python3 scripts/import_excel.py menu-source.xlsx items.json
-```
-
-This converts the original seven-column format while keeping existing editorial fields for matching names and categories. For the extended workbook use the admin importer.
-
-## Cart and checkout
-
-The cart supports optional add-ons, merged identical configurations, separate differing configurations, quantity changes, removal, totals and local persistence. Prices are recalculated from the loaded menu, not trusted from old stored totals.
-
-The cart is an order summary, not an e-commerce payment or confirmed restaurant order. Delivery and other fees are not included in the displayed subtotal. Availability and final total must be confirmed with the restaurant. Nothing is sent automatically, and the cart is not cleared merely because a messaging window opens.
-
-WhatsApp checkout is configured to the owner's explicitly requested number, `201040580225`. No branch number is used. It opens a prefilled draft for the visitor to review and send; it does not send automatically. The owner can change the number in the local editor and publish the JSON. Copy-order also works.
-
-
-## Deploy on GitHub Pages
-
-Upload the contents of this folder, not the enclosing folder and not `node_modules`. In repository Settings > Pages, select Deploy from a branch, branch `main`, folder `/ (root)`, then Save. The `.nojekyll` file is included. All assets and admin links work under a repository subpath.
-
-The main menu uses a single index.html with category filters.
-
-## Dependencies
-
-The menu loads Foodics-hosted photos. The admin loads SheetJS Community Edition 0.18.5 from jsDelivr for Excel import/export. Excel functions need that CDN to be reachable.
-
-## QA
-
-24 automated checks passed during delivery, including exact spreadsheet comparison, category/search/offer browsing, configured add-ons and cart math, quantity and reload persistence, local editor login and bad-password rejection, add/edit/delete, JSON export, Excel import/export, isolation of local preview from the public menu, mobile overflow and no JavaScript runtime errors. Desktop and mobile pages, cart and editor were visually inspected.
-
-
-Deployment packaging: CSS and JavaScript are inlined into each HTML page. Product photos use Foodics image URLs. The editor route is /admin.html. The GitHub repository contains index.html, admin.html, items.json and this README. The full offline source project and spreadsheets were also delivered separately.
+React is bundled, not fetched at runtime. Photos depend on the existing Foodics image host. Cairo font loads from Google Fonts with local fallback fonts. Excel tools load SheetJS from jsDelivr on demand; JSON import/export works without SheetJS.
