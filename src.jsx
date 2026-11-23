@@ -56,6 +56,10 @@ const defaults = {
     },
   ],
 };
+const sweetCategories = new Set(["الحلو", "الوافل", "الكعك والبسكويت", "الايس كريم", "ايس كريم تارتات"]);
+const sectionOf = (item) => ["main", "sweets"].includes(item.section)
+  ? item.section : sweetCategories.has(item.category) ? "sweets" : "main";
+const sectionTitle = (section) => section === "sweets" ? "الحلو" : "المنيو الأساسي";
 function valid(d) {
   if (!d || !Array.isArray(d.items) || !d.items.length)
     throw Error("الملف لا يحتوي على أصناف");
@@ -72,6 +76,7 @@ function valid(d) {
     )
       throw Error("راجع الأسماء والأقسام والأسعار والمعرفات");
     ids.add(i.id);
+    i.section = sectionOf(i);
     i.price = +i.price;
     i.priority = +i.priority || 0;
     i.available = i.available !== false;
@@ -231,6 +236,7 @@ function Menu({ data }) {
   const s = { ...defaults, ...data.settings },
     items = data.items;
   const [query, setQuery] = useState(""),
+    [section, setSection] = useState("main"),
     [cat, setCat] = useState(""),
     [count, setCount] = useState(24),
     [selected, setSelected] = useState(null),
@@ -272,12 +278,13 @@ function Menu({ data }) {
     total = lines.reduce((a, l) => a + l.unit * l.qty, 0),
     qty = lines.reduce((a, l) => a + l.qty, 0);
   const cats = [
-      ...new Set(items.filter((i) => i.available).map((i) => i.category)),
+      ...new Set(items.filter((i) => i.available && sectionOf(i) === section).map((i) => i.category)),
     ],
     filtered = items
       .filter(
         (i) =>
           i.available &&
+          sectionOf(i) === section &&
           (query.trim() ||
             !cat ||
             (cat === "@offers" ? i.offer : i.category === cat)) &&
@@ -490,8 +497,8 @@ function Menu({ data }) {
             </div>
             <input
               className="search"
-              aria-label="ابحث في المنيو"
-              placeholder="ابحث عن صنفك المفضل..."
+              aria-label={`ابحث في ${sectionTitle(section)}`}
+              placeholder={`ابحث في ${sectionTitle(section)}...`}
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
@@ -501,31 +508,32 @@ function Menu({ data }) {
           </div>
           <div className="menu-layout">
             <nav className="categories" aria-label="أقسام المنيو">
-              {[
-                ["", "كل المنيو"],
-                ["@offers", "العروض"],
-                ...cats.map((c) => [c, c]),
-              ].map(([id, title]) => (
-                <button
-                  key={id}
-                  className={!query.trim() && cat === id ? "active" : ""}
-                  onClick={() => {
-                    setCat(id);
-                    setCount(24);
-                  }}
-                >
-                  {title}
-                </button>
-              ))}
+              <div className="menu-sections" aria-label="الأقسام الرئيسية">
+                {["main", "sweets"].map((id) => (
+                  <button key={id} className={section === id ? "active" : ""}
+                    aria-pressed={section === id}
+                    onClick={() => { setSection(id); setCat(""); setQuery(""); setCount(24); }}>
+                    {sectionTitle(id)}
+                  </button>
+                ))}
+              </div>
+              <div className="category-filter" key={section} aria-label="تصفية حسب النوع">
+                {[["", "كل الأصناف"], ["@offers", "العروض"], ...cats.map((c) => [c, c])].map(([id, title]) => (
+                  <button key={id} aria-pressed={!query.trim() && cat === id} className={!query.trim() && cat === id ? "active" : ""}
+                    onClick={() => { setCat(id); setCount(24); }}>
+                    {title}
+                  </button>
+                ))}
+              </div>
             </nav>
             <div>
               <div className="results">
                 <h3>
                   {query.trim()
-                    ? "نتائج البحث في كل المنيو"
+                    ? `نتائج البحث في ${sectionTitle(section)}`
                     : cat === "@offers"
                       ? "العروض"
-                      : cat || "كل الأصناف"}
+                      : cat || sectionTitle(section)}
                 </h3>
                 <span>{filtered.length} صنف</span>
               </div>
@@ -551,7 +559,7 @@ function Menu({ data }) {
                           aria-label={"إضافة " + i.name}
                           onClick={() => details(i)}
                         >
-                          +
+                          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
                         </button>
                       </div>
                       <button
@@ -701,15 +709,15 @@ function Menu({ data }) {
             </>
           )}
           <button className="accent full" onClick={add}>
-            أضف للسلة ·{" "}
-            {money(
+            <span>أضف للسلة</span>
+            <bdi>{money(
               selected.price +
                 extra.reduce(
                   (sum, id) =>
                     sum + (items.find((i) => i.id === id)?.price || 0),
                   0,
                 ),
-            )}
+            )}</bdi>
           </button>
         </Modal>
       )}
@@ -979,6 +987,7 @@ function Admin({ published }) {
         wb,
         X.utils.json_to_sheet(
           data.items.map((i) => ({
+            Section: sectionOf(i),
             Category: i.category,
             Item: i.name,
             Description: i.description,
@@ -1041,6 +1050,7 @@ function Admin({ published }) {
               id: String(r.ID || crypto.randomUUID()),
               name: String(r.Item || ""),
               category: String(r.Category || ""),
+              section: r.Section || (r.Category === prev.category ? prev.section : undefined),
               price: +r.Price,
               description: r.Description || "",
               variant: r["Size/Variant"] || "",
@@ -1323,6 +1333,12 @@ function Admin({ published }) {
           >
             <form onSubmit={saveItem}>
               <div className="form-grid">
+                <label className="field">القسم الرئيسي
+                  <select value={sectionOf(edit)} onChange={(e) => setEdit({ ...edit, section: e.target.value })}>
+                    <option value="main">المنيو الأساسي</option>
+                    <option value="sweets">الحلو</option>
+                  </select>
+                </label>
                 {[
                   ["name", "اسم الصنف", "text"],
                   ["category", "القسم", "text"],
