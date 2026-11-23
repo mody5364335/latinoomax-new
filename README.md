@@ -86,3 +86,7 @@ The subtle header greeting uses the visitor device's local clock and updates onc
 ### Short item descriptions
 
 Every JSON item now has a short Arabic description, shown under the card title and in its detail popup and included in global search. Wording is limited to the existing item name/category, with no unverified ingredient, allergen, preparation, freshness or portion claims. Ambiguous signature names stay generic; delivery records describe delivery fees. The mixed offer category is classified per item: molten cake is sweets, cola is drinks, other offers are main; the offer flags and featured offers strip are unchanged.
+
+### Ingredient-style draft descriptions, recipe review required
+
+Descriptions are now ingredient-style drafts rather than name restatements. Typical-recipe assumptions were used for pizza base/sauce/cheese, sandwich breads and garlic sauce on chicken shawarma, creamy/pesto/bolognese pasta sauces, milkshake milk/ice cream, coffee/milk drinks, cheesecake biscuit/cream-cheese layers, molten chocolate centers, cinnamon rolls and other familiar desserts. They are not verified restaurant recipes. Signature names remain generic. Owner/restaurant review is required before merging or showing these as confirmed ingredients to customers; these descriptions are not allergen guidance.
