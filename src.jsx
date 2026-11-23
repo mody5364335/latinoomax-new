@@ -1573,7 +1573,8 @@ function Settings({ s, onClose, onSave }) {
                     required={key !== "address"}
                     value={
                       key === "phone"
-                        ? (b.phones || [b.phone]).filter(Boolean).join(", ")
+                        ? (b.phoneText ??
+                          (b.phones || [b.phone]).filter(Boolean).join(", "))
                         : b[key] || ""
                     }
                     maxLength={key === "address" ? 400 : 150}
@@ -1585,6 +1586,7 @@ function Settings({ s, onClose, onSave }) {
                             ? key === "phone"
                               ? {
                                   ...x,
+                                  phoneText: e.target.value,
                                   phone: e.target.value.split(",")[0].trim(),
                                   phones: e.target.value
                                     .split(",")
