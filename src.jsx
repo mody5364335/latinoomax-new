@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo, useDeferredValue } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 const brandLogo =
@@ -122,6 +122,7 @@ function Photo({ item, ...props }) {
       src={url(item.image)}
       alt={item.name}
       loading="lazy"
+      decoding="async"
       onError={(e) => {
         e.currentTarget.style.visibility = "hidden";
       }}
@@ -297,20 +298,21 @@ function Menu({ data }) {
       .filter(Boolean),
     total = lines.reduce((a, l) => a + l.unit * l.qty, 0),
     qty = lines.reduce((a, l) => a + l.qty, 0);
+  const deferredQuery = useDeferredValue(query);
   const cats = [
       ...new Set(items.filter((i) => i.available && sectionOf(i) === section).map((i) => i.category)),
     ],
-    filtered = items
+    filtered = useMemo(() => items
       .filter(
         (i) =>
           i.available &&
-          (query.trim() || sectionOf(i) === section) &&
-          (query.trim() ||
+          (deferredQuery.trim() || sectionOf(i) === section) &&
+          (deferredQuery.trim() ||
             !cat ||
             (cat === "@offers" ? i.offer : i.category === cat)) &&
-          (!query.trim() || matchesSearch(i, query)),
+          (!deferredQuery.trim() || matchesSearch(i, deferredQuery)),
       )
-      .sort((a, b) => a.priority - b.priority);
+      .sort((a, b) => a.priority - b.priority), [items, section, cat, deferredQuery]);
   const featured = items
     .filter(
       (i) =>
@@ -321,6 +323,8 @@ function Menu({ data }) {
       (a, b) =>
         (a.featuredPriority ?? a.priority) - (b.featuredPriority ?? b.priority),
     );
+  const suggestCache = useMemo(() => new Map(), [items]);
+  function hasSuggestions(i) { let v = suggestCache.get(i.id); if (v === undefined) { v = suggestions(i, items).length > 0; suggestCache.set(i.id, v); } return v; }
   const [offerIndex, setOfferIndex] = useState(0);
   const offerIndexRef = useRef(0), offerHolding = useRef(false);
   const offerNextAt = useRef(Date.now() + 6000);
@@ -574,7 +578,7 @@ function Menu({ data }) {
               </div>
               <div className="category-filter" key={section} aria-label="تصفية حسب النوع">
                 {[["", "كل الأصناف"], ["@offers", "العروض"], ...cats.map((c) => [c, c])].map(([id, title]) => (
-                  <button key={id} aria-pressed={!query.trim() && cat === id} className={!query.trim() && cat === id ? "active" : ""}
+                  <button key={id} aria-pressed={!deferredQuery.trim() && cat === id} className={!deferredQuery.trim() && cat === id ? "active" : ""}
                     onClick={() => { setCat(id); setCount(24); }}>
                     {title}
                   </button>
@@ -584,7 +588,7 @@ function Menu({ data }) {
             <div>
               <div className="results">
                 <h3>
-                  {query.trim()
+                  {deferredQuery.trim()
                     ? "نتائج البحث في كل المنيو"
                     : cat === "@offers"
                       ? "العروض"
@@ -604,7 +608,7 @@ function Menu({ data }) {
                       {i.offer && <span className="badge">عرض</span>}
                     </button>
                     <div className="card-body">
-                      <small>{query.trim() ? `${sectionTitle(sectionOf(i))} · ${i.category}` : i.category}</small>
+                      <small>{deferredQuery.trim() ? `${sectionTitle(sectionOf(i))} · ${i.category}` : i.category}</small>
                       <h3>{i.name}</h3>
                       {i.description && <p className="item-description">{i.description}</p>}
                       {i.variant && <p className="muted">{i.variant}</p>}
@@ -622,7 +626,7 @@ function Menu({ data }) {
                         className="detail-link"
                         onClick={() => details(i)}
                       >
-                        {suggestions(i, items).length
+                        {hasSuggestions(i)
                           ? "كمل طلبك بإضافات ↗"
                           : "تفاصيل الصنف ↗"}
                       </button>
