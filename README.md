@@ -55,6 +55,14 @@ React is bundled, not fetched at runtime. Photos depend on the existing Foodics 
 
 ## Contact section and brand
 
-The header uses the supplied cropped logo. Featured offers support horizontal swipe, arrow controls and card interactions. Search always covers the full menu while text is entered; clearing it returns to the chosen category.
+The header uses the supplied cropped logo. Featured offers support horizontal swipe, arrow controls and card interactions. Search covers the selected main section while text is entered; clearing it returns to the chosen category.
 
 The contact section has one editable branch with three phone rows with the supplied place name, address and repeated phone number. Edit, add, remove or hide entries from interface settings. JSON and Excel Settings exports preserve branch data. Contact buttons open a phone call or WhatsApp chat; they do not send a message.
+
+## Two main menu sections (branch preview)
+
+The menu now starts with المنيو الأساسي and الحلو. Existing categories remain as horizontally scrollable type filters under the sticky section toggle. Category order follows the JSON; no unverified popularity ranking is implied. Search and offers are scoped to the selected section. All 494 items, original categories, prices, IDs, images and add-on links are retained.
+
+Each item in `items.json` has `section: "main"` or `section: "sweets"`. The local admin item editor and Excel `Section` column also support this field. Older JSON without the field remains compatible: the five dessert categories الحلو، الوافل، الكعك والبسكويت، الايس كريم، ايس كريم تارتات default to sweets; other categories default to main. Drinks and shared bar add-ons stay in main. The crepes currently listed are savory, so remain in main. Explicit item section values override these defaults.
+
+This branch does not change the live GitHub Pages site until it is reviewed and merged. To preview, download this branch and serve its root with `python3 -m http.server 8080`.
