@@ -321,6 +321,33 @@ function Menu({ data }) {
       (a, b) =>
         (a.featuredPriority ?? a.priority) - (b.featuredPriority ?? b.priority),
     );
+  const [offerIndex, setOfferIndex] = useState(0);
+  const offerIndexRef = useRef(0), offerPaused = useRef(false);
+  const [autoOffers, setAutoOffers] = useState(true);
+  function goOffer(index, smooth = true) {
+    const track = featureTrack.current;
+    if (!track || !featured.length) return;
+    const next = (index + featured.length) % featured.length;
+    const card = track.children[next];
+    const a = card.getBoundingClientRect(), b = track.getBoundingClientRect();
+    track.scrollBy({left: a.left - b.left - (b.width - a.width) / 2, behavior: smooth ? "smooth" : "instant"});
+    offerIndexRef.current = next; setOfferIndex(next);
+  }
+  function syncOffer() {
+    const track = featureTrack.current;
+    if (!track) return;
+    const b = track.getBoundingClientRect();
+    let best = 0, distance = Infinity;
+    [...track.children].forEach((card, index) => { const a = card.getBoundingClientRect(); const d = Math.abs((a.left+a.right)/2-(b.left+b.right)/2); if(d < distance){best=index;distance=d;} });
+    offerIndexRef.current = best; setOfferIndex(best);
+  }
+  useEffect(() => {
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+    const timer = setInterval(() => {
+      if (autoOffers && !reduced.matches && !offerPaused.current && !document.hidden && !document.querySelector("dialog[open]")) goOffer(offerIndexRef.current + 1);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [autoOffers, featured.length]);
   function details(i) {
     setSelected(i);
     setExtra([]);
@@ -436,30 +463,23 @@ function Menu({ data }) {
                 <button
                   className="offer-arrow"
                   aria-label="العروض السابقة"
-                  onClick={() =>
-                    featureTrack.current?.scrollBy({
-                      left: 340,
-                      behavior: "smooth",
-                    })
-                  }
+                  onClick={() => goOffer(offerIndexRef.current - 1)}
                 >
                   →
                 </button>
                 <button
                   className="offer-arrow"
                   aria-label="العروض التالية"
-                  onClick={() =>
-                    featureTrack.current?.scrollBy({
-                      left: -340,
-                      behavior: "smooth",
-                    })
-                  }
+                  onClick={() => goOffer(offerIndexRef.current + 1)}
                 >
                   ←
                 </button>
               </div>
             </div>
-            <div className="feature-track" ref={featureTrack}>
+            <div className="feature-track" ref={featureTrack} onScroll={syncOffer}
+              onMouseEnter={() => {offerPaused.current=true}} onMouseLeave={() => {offerPaused.current=false}}
+              onTouchStart={() => {offerPaused.current=true}} onTouchEnd={() => {offerPaused.current=false}}
+              onFocusCapture={() => {offerPaused.current=true}} onBlurCapture={() => {offerPaused.current=false}}>
               {featured.map((i) => (
                 <button
                   className="feature-card"
@@ -481,6 +501,10 @@ function Menu({ data }) {
                   </span>
                 </button>
               ))}
+            </div>
+            <div className="offer-pagination" aria-label="موضع العرض">
+              <div className="offer-bars">{featured.map((item,index) => <button key={item.id} className={offerIndex === index ? "current" : ""} aria-label={`العرض ${index+1} من ${featured.length}`} aria-current={offerIndex === index ? "true" : undefined} onClick={() => goOffer(index)} />)}</div>
+              <button className="offer-auto" onClick={() => setAutoOffers(v => !v)} aria-label={autoOffers ? "إيقاف تقليب العروض" : "تشغيل تقليب العروض"}>{autoOffers ? "إيقاف مؤقت" : "تشغيل"}</button>
             </div>
           </section>
         )}
