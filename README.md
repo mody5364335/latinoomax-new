@@ -70,3 +70,19 @@ This branch does not change the live GitHub Pages site until it is reviewed and 
 ### Arabic search and screen checks
 
 Global search matches item names, categories and descriptions. It ignores Arabic vowel marks and tatweel, normalizes alef/hamza, ta marbuta/ha and ya/alef maqsura, and accepts عصير/عصائر/عصاير and فطير/فطائر/فطاير word variants. Multiple words must all match. No products are invented: the current catalog has no feteer items, so searching فطير correctly returns no results until matching products are added.
+
+## Three corners and local greeting
+
+The section buttons are now المنيو الأساسي, ركن الحلو and ركن المشروبات. Whole-menu Arabic search remains global. Dessert categories stay in sweets; milkshakes, juices, coffee, tea/matcha, smoothies, yogurt drinks and beverage add-on categories are in drinks. Food add-ons, delivery entries and the existing savory offers remain under main. Shared bar toppings are kept together with the beverage-bar category rather than duplicated; existing add-on links are unchanged and may still be selected on dessert items. Ice cream and ice cream cakes remain sweets, not drinks.
+
+The subtle header greeting uses the visitor device's local clock and updates once per minute: morning from 06:00 to 15:59, evening from 16:00 to 05:59. The unspecified 06:00-07:00 gap is treated as morning. No location permission is needed.
+
+### Category mapping
+
+- main (250 items): التاكو, توصيل, سندوتش اللحوم, الباستا, اضافات فود, وجبات الدجاج, الكريب, وجبات اللحوم, البرجر, سلاطات, مقبلات, سندوتش سي فوود, الشوربة, سندوتش الدجاج, بيتزا وسط, بيتزا كبير, اطباق لاتينو المشتعله, لاتينو جريل, وجبات الرمضانيه, السحور, لاتينو فراي تشيكن, البيتزا, الكومبو, عرض 11/11
+- sweets (68 items): الكعك والبسكويت, الحلو, الوافل, الايس كريم, ايس كريم تارتات
+- drinks (176 items): ميلك شيك, اضافات فلفر, سموزى, عصائر رمضان, مشروبات غازية, المشروبات الساخنه, القهوه المثلجه, الزبادي, ميكسات سموزي, فراابيه, العصائر, الكوكتيلات, ميكسات زبادي, اضافات بار, هوت ماتشا, ايس ماتشا
+
+### Short item descriptions
+
+Every JSON item now has a short Arabic description, shown under the card title and in its detail popup and included in global search. Wording is limited to the existing item name/category, with no unverified ingredient, allergen, preparation, freshness or portion claims. Ambiguous signature names stay generic; delivery records describe delivery fees. The mixed offer category is classified per item: molten cake is sweets, cola is drinks, other offers are main; the offer flags and featured offers strip are unchanged.
