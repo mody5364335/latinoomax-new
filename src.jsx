@@ -68,9 +68,18 @@ const defaults = {
   ],
 };
 const sweetCategories = new Set(["الحلو", "الوافل", "الكعك والبسكويت", "الايس كريم", "ايس كريم تارتات"]);
-const sectionOf = (item) => ["main", "sweets"].includes(item.section)
-  ? item.section : sweetCategories.has(item.category) ? "sweets" : "main";
-const sectionTitle = (section) => section === "sweets" ? "الحلو" : "المنيو الأساسي";
+const drinkCategories = new Set(["ميلك شيك", "مشروبات غازية", "عصائر رمضان", "العصائر", "سموزى", "المشروبات الساخنه", "ايس ماتشا", "القهوه المثلجه", "فراابيه", "الكوكتيلات", "الزبادي", "ميكسات زبادي", "ميكسات سموزي", "هوت ماتشا", "اضافات بار", "اضافات فلفر"]);
+const sectionOf = (item) => ["main", "sweets", "drinks"].includes(item.section)
+  ? item.section : sweetCategories.has(item.category) ? "sweets" : drinkCategories.has(item.category) ? "drinks" : "main";
+const sectionTitle = (section) => ({main: "المنيو الأساسي", sweets: "ركن الحلو", drinks: "ركن المشروبات"})[section] || "المنيو الأساسي";
+function Greeting() {
+  const [hour, setHour] = useState(() => new Date().getHours());
+  useEffect(() => { const timer = setInterval(() => setHour(new Date().getHours()), 60000); return () => clearInterval(timer); }, []);
+  const morning = hour >= 6 && hour < 16;
+  return <span className="greeting"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+    {morning ? <><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></> : <path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z"/>}
+  </svg>{morning ? "صباح الخير" : "مساء الخير"}</span>;
+}
 function valid(d) {
   if (!d || !Array.isArray(d.items) || !d.items.length)
     throw Error("الملف لا يحتوي على أصناف");
@@ -395,7 +404,7 @@ function Menu({ data }) {
     items.find((i) => i.image);
   return (
     <>
-      <header>
+      <header className="menu-header">
         <a href="./" className="brand">
           <span className="brand-plaque">
             <img className="brand-logo" src={brandLogo} alt={s.brand} />
@@ -404,6 +413,7 @@ function Menu({ data }) {
             لاتينو ماكس<small>طعم على مزاجك</small>
           </span>
         </a>
+        <Greeting />
         <button className="primary" onClick={() => setOpen(true)}>
           السلة <span className="bubble">{qty}</span>
         </button>
@@ -517,7 +527,7 @@ function Menu({ data }) {
           <div className="menu-layout">
             <nav className="categories" aria-label="أقسام المنيو">
               <div className="menu-sections" aria-label="الأقسام الرئيسية">
-                {["main", "sweets"].map((id) => (
+                {["main", "sweets", "drinks"].map((id) => (
                   <button key={id} className={section === id ? "active" : ""}
                     aria-pressed={section === id}
                     onClick={() => { setSection(id); setCat(""); setQuery(""); setCount(24); }}>
@@ -559,6 +569,7 @@ function Menu({ data }) {
                     <div className="card-body">
                       <small>{query.trim() ? `${sectionTitle(sectionOf(i))} · ${i.category}` : i.category}</small>
                       <h3>{i.name}</h3>
+                      {i.description && <p className="item-description">{i.description}</p>}
                       {i.variant && <p className="muted">{i.variant}</p>}
                       <div className="card-bottom">
                         <strong>{money(i.price)}</strong>
@@ -1344,7 +1355,8 @@ function Admin({ published }) {
                 <label className="field">القسم الرئيسي
                   <select value={sectionOf(edit)} onChange={(e) => setEdit({ ...edit, section: e.target.value })}>
                     <option value="main">المنيو الأساسي</option>
-                    <option value="sweets">الحلو</option>
+                    <option value="sweets">ركن الحلو</option>
+                    <option value="drinks">ركن المشروبات</option>
                   </select>
                 </label>
                 {[
