@@ -55,6 +55,38 @@ React is bundled, not fetched at runtime. Photos depend on the existing Foodics 
 
 ## Contact section and brand
 
-The header uses the supplied cropped logo. Featured offers support horizontal swipe, arrow controls and card interactions. Search always covers the full menu while text is entered; clearing it returns to the chosen category.
+The header uses the supplied cropped logo. Featured offers support horizontal swipe, arrow controls and card interactions. Search covers the entire menu while text is entered; clearing it returns to the chosen section and category.
 
 The contact section has one editable branch with three phone rows with the supplied place name, address and repeated phone number. Edit, add, remove or hide entries from interface settings. JSON and Excel Settings exports preserve branch data. Contact buttons open a phone call or WhatsApp chat; they do not send a message.
+
+## Two main menu sections (branch preview)
+
+The menu now starts with المنيو الأساسي and الحلو. Existing categories remain as horizontally scrollable type filters under the sticky section toggle. Category order follows the JSON; no unverified popularity ranking is implied. Search covers both sections; category and offer filters apply when search is empty. All 494 items, original categories, prices, IDs, images and add-on links are retained.
+
+Each item in `items.json` has `section: "main"` or `section: "sweets"`. The local admin item editor and Excel `Section` column also support this field. Older JSON without the field remains compatible: the five dessert categories الحلو، الوافل، الكعك والبسكويت، الايس كريم، ايس كريم تارتات default to sweets; other categories default to main. Drinks and shared bar add-ons stay in main. The crepes currently listed are savory, so remain in main. Explicit item section values override these defaults.
+
+This branch does not change the live GitHub Pages site until it is reviewed and merged. To preview, download this branch and serve its root with `python3 -m http.server 8080`.
+
+### Arabic search and screen checks
+
+Global search matches item names, categories and descriptions. It ignores Arabic vowel marks and tatweel, normalizes alef/hamza, ta marbuta/ha and ya/alef maqsura, and accepts عصير/عصائر/عصاير and فطير/فطائر/فطاير word variants. Multiple words must all match. No products are invented: the current catalog has no feteer items, so searching فطير correctly returns no results until matching products are added.
+
+## Three corners and local greeting
+
+The section buttons are now المنيو الأساسي, ركن الحلو and ركن المشروبات. Whole-menu Arabic search remains global. Dessert categories stay in sweets; milkshakes, juices, coffee, tea/matcha, smoothies, yogurt drinks and beverage add-on categories are in drinks. Food add-ons, delivery entries and the existing savory offers remain under main. Shared bar toppings are kept together with the beverage-bar category rather than duplicated; existing add-on links are unchanged and may still be selected on dessert items. Ice cream and ice cream cakes remain sweets, not drinks.
+
+The subtle header greeting uses the visitor device's local clock and updates once per minute: morning from 06:00 to 15:59, evening from 16:00 to 05:59. The unspecified 06:00-07:00 gap is treated as morning. No location permission is needed.
+
+### Category mapping
+
+- main (250 items): التاكو, توصيل, سندوتش اللحوم, الباستا, اضافات فود, وجبات الدجاج, الكريب, وجبات اللحوم, البرجر, سلاطات, مقبلات, سندوتش سي فوود, الشوربة, سندوتش الدجاج, بيتزا وسط, بيتزا كبير, اطباق لاتينو المشتعله, لاتينو جريل, وجبات الرمضانيه, السحور, لاتينو فراي تشيكن, البيتزا, الكومبو, عرض 11/11
+- sweets (68 items): الكعك والبسكويت, الحلو, الوافل, الايس كريم, ايس كريم تارتات
+- drinks (176 items): ميلك شيك, اضافات فلفر, سموزى, عصائر رمضان, مشروبات غازية, المشروبات الساخنه, القهوه المثلجه, الزبادي, ميكسات سموزي, فراابيه, العصائر, الكوكتيلات, ميكسات زبادي, اضافات بار, هوت ماتشا, ايس ماتشا
+
+### Short item descriptions
+
+Every JSON item now has a short Arabic description, shown under the card title and in its detail popup and included in global search. Wording is limited to the existing item name/category, with no unverified ingredient, allergen, preparation, freshness or portion claims. Ambiguous signature names stay generic; delivery records describe delivery fees. The mixed offer category is classified per item: molten cake is sweets, cola is drinks, other offers are main; the offer flags and featured offers strip are unchanged.
+
+### Ingredient-style draft descriptions, recipe review required
+
+Descriptions are now ingredient-style drafts rather than name restatements. Typical-recipe assumptions were used for pizza base/sauce/cheese, sandwich breads and garlic sauce on chicken shawarma, creamy/pesto/bolognese pasta sauces, milkshake milk/ice cream, coffee/milk drinks, cheesecake biscuit/cream-cheese layers, molten chocolate centers, cinnamon rolls and other familiar desserts. They are not verified restaurant recipes. Signature names remain generic. Owner/restaurant review is required before merging or showing these as confirmed ingredients to customers; these descriptions are not allergen guidance.

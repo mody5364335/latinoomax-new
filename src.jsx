@@ -18,12 +18,23 @@ const store = (k, v) => {
 };
 const money = (n) => Number(n).toLocaleString("ar-EG") + " ج.م";
 const norm = (s) =>
-  String(s)
-    .replace(/[أإآ]/g, "ا")
-    .replace(/ى/g, "ي")
+  String(s || "")
+    .normalize("NFKD")
+    .replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g, "")
+    .replace(/[أإآٱ]/g, "ا")
+    .replace(/ؤ/g, "و")
+    .replace(/ئ/g, "ي")
+    .replace(/ء/g, "")
+    .replace(/[ىی]/g, "ي")
     .replace(/ة/g, "ه")
-    .replace(/[\u064B-\u065F]/g, "")
-    .toLowerCase();
+    .toLowerCase().trim();
+const searchTerm = (s) => norm(s)
+  .replace(/عصاير|عصير/g, "عصائر")
+  .replace(/فطير|فطاير/g, "فطائر");
+const matchesSearch = (item, query) => {
+  const text = searchTerm(item.name + " " + item.category + " " + (item.description || ""));
+  return searchTerm(query).split(/\s+/).filter(Boolean).every((word) => text.includes(word));
+};
 const defaults = {
   brand: "LATINOO MAX",
   orderPhone: "201040580225",
@@ -56,6 +67,19 @@ const defaults = {
     },
   ],
 };
+const sweetCategories = new Set(["الحلو", "الوافل", "الكعك والبسكويت", "الايس كريم", "ايس كريم تارتات"]);
+const drinkCategories = new Set(["ميلك شيك", "مشروبات غازية", "عصائر رمضان", "العصائر", "سموزى", "المشروبات الساخنه", "ايس ماتشا", "القهوه المثلجه", "فراابيه", "الكوكتيلات", "الزبادي", "ميكسات زبادي", "ميكسات سموزي", "هوت ماتشا", "اضافات بار", "اضافات فلفر"]);
+const sectionOf = (item) => ["main", "sweets", "drinks"].includes(item.section)
+  ? item.section : sweetCategories.has(item.category) ? "sweets" : drinkCategories.has(item.category) ? "drinks" : "main";
+const sectionTitle = (section) => ({main: "المنيو الأساسي", sweets: "ركن الحلو", drinks: "ركن المشروبات"})[section] || "المنيو الأساسي";
+function Greeting() {
+  const [hour, setHour] = useState(() => new Date().getHours());
+  useEffect(() => { const timer = setInterval(() => setHour(new Date().getHours()), 60000); return () => clearInterval(timer); }, []);
+  const morning = hour >= 6 && hour < 16;
+  return <span className="greeting"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+    {morning ? <><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></> : <path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z"/>}
+  </svg>{morning ? "صباح الخير" : "مساء الخير"}</span>;
+}
 function valid(d) {
   if (!d || !Array.isArray(d.items) || !d.items.length)
     throw Error("الملف لا يحتوي على أصناف");
@@ -72,6 +96,7 @@ function valid(d) {
     )
       throw Error("راجع الأسماء والأقسام والأسعار والمعرفات");
     ids.add(i.id);
+    i.section = sectionOf(i);
     i.price = +i.price;
     i.priority = +i.priority || 0;
     i.available = i.available !== false;
@@ -231,6 +256,7 @@ function Menu({ data }) {
   const s = { ...defaults, ...data.settings },
     items = data.items;
   const [query, setQuery] = useState(""),
+    [section, setSection] = useState("main"),
     [cat, setCat] = useState(""),
     [count, setCount] = useState(24),
     [selected, setSelected] = useState(null),
@@ -272,19 +298,17 @@ function Menu({ data }) {
     total = lines.reduce((a, l) => a + l.unit * l.qty, 0),
     qty = lines.reduce((a, l) => a + l.qty, 0);
   const cats = [
-      ...new Set(items.filter((i) => i.available).map((i) => i.category)),
+      ...new Set(items.filter((i) => i.available && sectionOf(i) === section).map((i) => i.category)),
     ],
     filtered = items
       .filter(
         (i) =>
           i.available &&
+          (query.trim() || sectionOf(i) === section) &&
           (query.trim() ||
             !cat ||
             (cat === "@offers" ? i.offer : i.category === cat)) &&
-          (!query ||
-            norm(
-              i.name + " " + i.category + " " + (i.description || ""),
-            ).includes(norm(query))),
+          (!query.trim() || matchesSearch(i, query)),
       )
       .sort((a, b) => a.priority - b.priority);
   const featured = items
@@ -297,6 +321,47 @@ function Menu({ data }) {
       (a, b) =>
         (a.featuredPriority ?? a.priority) - (b.featuredPriority ?? b.priority),
     );
+  const [offerIndex, setOfferIndex] = useState(0);
+  const offerIndexRef = useRef(0), offerHolding = useRef(false);
+  const offerNextAt = useRef(Date.now() + 6000);
+  function pauseOffers() { offerNextAt.current = Date.now() + 5000; }
+  function holdOffers() { offerHolding.current = true; pauseOffers(); }
+  function releaseOffers() { if (offerHolding.current) { offerHolding.current = false; pauseOffers(); } }
+  function goOffer(index, smooth = true) {
+    const track = featureTrack.current;
+    if (!track || !featured.length) return;
+    const next = (index + featured.length) % featured.length;
+    const card = track.children[next];
+    const a = card.getBoundingClientRect(), b = track.getBoundingClientRect();
+    track.scrollBy({left: a.left - b.left - (b.width - a.width) / 2, behavior: smooth && !matchMedia("(prefers-reduced-motion: reduce)").matches ? "smooth" : "instant"});
+    offerIndexRef.current = next; setOfferIndex(next);
+  }
+  function syncOffer() {
+    const track = featureTrack.current;
+    if (!track) return;
+    const b = track.getBoundingClientRect();
+    let best = 0, distance = Infinity;
+    [...track.children].forEach((card, index) => { const a = card.getBoundingClientRect(); const d = Math.abs((a.left+a.right)/2-(b.left+b.right)/2); if(d < distance){best=index;distance=d;} });
+    offerIndexRef.current = best; setOfferIndex(best);
+  }
+  useEffect(() => {
+    // Keep regular rotation at six seconds; each interaction gives five seconds to read.
+    offerNextAt.current = Date.now() + 6000;
+    const release = () => releaseOffers();
+    window.addEventListener("pointerup", release);
+    window.addEventListener("pointercancel", release);
+    const timer = setInterval(() => {
+      if (offerHolding.current || document.hidden || document.querySelector("dialog[open]")) {
+        offerNextAt.current = Date.now() + 5000;
+        return;
+      }
+      if (Date.now() >= offerNextAt.current) {
+        goOffer(offerIndexRef.current + 1);
+        offerNextAt.current = Date.now() + 6000;
+      }
+    }, 100);
+    return () => { clearInterval(timer); window.removeEventListener("pointerup", release); window.removeEventListener("pointercancel", release); };
+  }, [featured.length]);
   function details(i) {
     setSelected(i);
     setExtra([]);
@@ -380,7 +445,7 @@ function Menu({ data }) {
     items.find((i) => i.image);
   return (
     <>
-      <header>
+      <header className="menu-header">
         <a href="./" className="brand">
           <span className="brand-plaque">
             <img className="brand-logo" src={brandLogo} alt={s.brand} />
@@ -389,6 +454,7 @@ function Menu({ data }) {
             لاتينو ماكس<small>طعم على مزاجك</small>
           </span>
         </a>
+        <Greeting />
         <button className="primary" onClick={() => setOpen(true)}>
           السلة <span className="bubble">{qty}</span>
         </button>
@@ -400,7 +466,10 @@ function Menu({ data }) {
           </div>
         )}
         {s.featuredEnabled && featured.length > 0 && (
-          <section className="featured" aria-label="اختيارات مميزة">
+          <section className="featured" aria-label="اختيارات مميزة"
+            onPointerDownCapture={holdOffers} onPointerUpCapture={releaseOffers}
+            onPointerCancelCapture={releaseOffers} onWheelCapture={pauseOffers}
+            onKeyDownCapture={pauseOffers} onClickCapture={pauseOffers}>
             <div className="section-head">
               <div>
                 <p className="eyebrow">اختيارات لاتينو</p>
@@ -411,30 +480,20 @@ function Menu({ data }) {
                 <button
                   className="offer-arrow"
                   aria-label="العروض السابقة"
-                  onClick={() =>
-                    featureTrack.current?.scrollBy({
-                      left: 340,
-                      behavior: "smooth",
-                    })
-                  }
+                  onClick={() => goOffer(offerIndexRef.current - 1)}
                 >
                   →
                 </button>
                 <button
                   className="offer-arrow"
                   aria-label="العروض التالية"
-                  onClick={() =>
-                    featureTrack.current?.scrollBy({
-                      left: -340,
-                      behavior: "smooth",
-                    })
-                  }
+                  onClick={() => goOffer(offerIndexRef.current + 1)}
                 >
                   ←
                 </button>
               </div>
             </div>
-            <div className="feature-track" ref={featureTrack}>
+            <div className="feature-track" ref={featureTrack} onScroll={syncOffer}>
               {featured.map((i) => (
                 <button
                   className="feature-card"
@@ -456,6 +515,9 @@ function Menu({ data }) {
                   </span>
                 </button>
               ))}
+            </div>
+            <div className="offer-pagination" aria-label="موضع العرض">
+              <div className="offer-bars">{featured.map((item,index) => <button key={item.id} className={offerIndex === index ? "current" : ""} aria-label={`العرض ${index+1} من ${featured.length}`} aria-current={offerIndex === index ? "true" : undefined} onClick={() => goOffer(index)} />)}</div>
             </div>
           </section>
         )}
@@ -490,8 +552,8 @@ function Menu({ data }) {
             </div>
             <input
               className="search"
-              aria-label="ابحث في المنيو"
-              placeholder="ابحث عن صنفك المفضل..."
+              aria-label="ابحث في كل المنيو"
+              placeholder="ابحث في كل المنيو..."
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
@@ -501,22 +563,23 @@ function Menu({ data }) {
           </div>
           <div className="menu-layout">
             <nav className="categories" aria-label="أقسام المنيو">
-              {[
-                ["", "كل المنيو"],
-                ["@offers", "العروض"],
-                ...cats.map((c) => [c, c]),
-              ].map(([id, title]) => (
-                <button
-                  key={id}
-                  className={!query.trim() && cat === id ? "active" : ""}
-                  onClick={() => {
-                    setCat(id);
-                    setCount(24);
-                  }}
-                >
-                  {title}
-                </button>
-              ))}
+              <div className="menu-sections" aria-label="الأقسام الرئيسية">
+                {["main", "sweets", "drinks"].map((id) => (
+                  <button key={id} className={section === id ? "active" : ""}
+                    aria-pressed={section === id}
+                    onClick={() => { setSection(id); setCat(""); setQuery(""); setCount(24); }}>
+                    {sectionTitle(id)}
+                  </button>
+                ))}
+              </div>
+              <div className="category-filter" key={section} aria-label="تصفية حسب النوع">
+                {[["", "كل الأصناف"], ["@offers", "العروض"], ...cats.map((c) => [c, c])].map(([id, title]) => (
+                  <button key={id} aria-pressed={!query.trim() && cat === id} className={!query.trim() && cat === id ? "active" : ""}
+                    onClick={() => { setCat(id); setCount(24); }}>
+                    {title}
+                  </button>
+                ))}
+              </div>
             </nav>
             <div>
               <div className="results">
@@ -525,7 +588,7 @@ function Menu({ data }) {
                     ? "نتائج البحث في كل المنيو"
                     : cat === "@offers"
                       ? "العروض"
-                      : cat || "كل الأصناف"}
+                      : cat || sectionTitle(section)}
                 </h3>
                 <span>{filtered.length} صنف</span>
               </div>
@@ -541,8 +604,9 @@ function Menu({ data }) {
                       {i.offer && <span className="badge">عرض</span>}
                     </button>
                     <div className="card-body">
-                      <small>{i.category}</small>
+                      <small>{query.trim() ? `${sectionTitle(sectionOf(i))} · ${i.category}` : i.category}</small>
                       <h3>{i.name}</h3>
+                      {i.description && <p className="item-description">{i.description}</p>}
                       {i.variant && <p className="muted">{i.variant}</p>}
                       <div className="card-bottom">
                         <strong>{money(i.price)}</strong>
@@ -551,7 +615,7 @@ function Menu({ data }) {
                           aria-label={"إضافة " + i.name}
                           onClick={() => details(i)}
                         >
-                          +
+                          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
                         </button>
                       </div>
                       <button
@@ -701,15 +765,15 @@ function Menu({ data }) {
             </>
           )}
           <button className="accent full" onClick={add}>
-            أضف للسلة ·{" "}
-            {money(
+            <span>أضف للسلة</span>
+            <bdi>{money(
               selected.price +
                 extra.reduce(
                   (sum, id) =>
                     sum + (items.find((i) => i.id === id)?.price || 0),
                   0,
                 ),
-            )}
+            )}</bdi>
           </button>
         </Modal>
       )}
@@ -979,6 +1043,7 @@ function Admin({ published }) {
         wb,
         X.utils.json_to_sheet(
           data.items.map((i) => ({
+            Section: sectionOf(i),
             Category: i.category,
             Item: i.name,
             Description: i.description,
@@ -1041,6 +1106,7 @@ function Admin({ published }) {
               id: String(r.ID || crypto.randomUUID()),
               name: String(r.Item || ""),
               category: String(r.Category || ""),
+              section: r.Section || (r.Category === prev.category ? prev.section : undefined),
               price: +r.Price,
               description: r.Description || "",
               variant: r["Size/Variant"] || "",
@@ -1323,6 +1389,13 @@ function Admin({ published }) {
           >
             <form onSubmit={saveItem}>
               <div className="form-grid">
+                <label className="field">القسم الرئيسي
+                  <select value={sectionOf(edit)} onChange={(e) => setEdit({ ...edit, section: e.target.value })}>
+                    <option value="main">المنيو الأساسي</option>
+                    <option value="sweets">ركن الحلو</option>
+                    <option value="drinks">ركن المشروبات</option>
+                  </select>
+                </label>
                 {[
                   ["name", "اسم الصنف", "text"],
                   ["category", "القسم", "text"],
