@@ -18,12 +18,23 @@ const store = (k, v) => {
 };
 const money = (n) => Number(n).toLocaleString("ar-EG") + " ج.م";
 const norm = (s) =>
-  String(s)
-    .replace(/[أإآ]/g, "ا")
-    .replace(/ى/g, "ي")
+  String(s || "")
+    .normalize("NFKD")
+    .replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g, "")
+    .replace(/[أإآٱ]/g, "ا")
+    .replace(/ؤ/g, "و")
+    .replace(/ئ/g, "ي")
+    .replace(/ء/g, "")
+    .replace(/[ىی]/g, "ي")
     .replace(/ة/g, "ه")
-    .replace(/[\u064B-\u065F]/g, "")
-    .toLowerCase();
+    .toLowerCase().trim();
+const searchTerm = (s) => norm(s)
+  .replace(/عصاير|عصير/g, "عصائر")
+  .replace(/فطير|فطاير/g, "فطائر");
+const matchesSearch = (item, query) => {
+  const text = searchTerm(item.name + " " + item.category + " " + (item.description || ""));
+  return searchTerm(query).split(/\s+/).filter(Boolean).every((word) => text.includes(word));
+};
 const defaults = {
   brand: "LATINOO MAX",
   orderPhone: "201040580225",
@@ -284,14 +295,11 @@ function Menu({ data }) {
       .filter(
         (i) =>
           i.available &&
-          sectionOf(i) === section &&
+          (query.trim() || sectionOf(i) === section) &&
           (query.trim() ||
             !cat ||
             (cat === "@offers" ? i.offer : i.category === cat)) &&
-          (!query ||
-            norm(
-              i.name + " " + i.category + " " + (i.description || ""),
-            ).includes(norm(query))),
+          (!query.trim() || matchesSearch(i, query)),
       )
       .sort((a, b) => a.priority - b.priority);
   const featured = items
@@ -497,8 +505,8 @@ function Menu({ data }) {
             </div>
             <input
               className="search"
-              aria-label={`ابحث في ${sectionTitle(section)}`}
-              placeholder={`ابحث في ${sectionTitle(section)}...`}
+              aria-label="ابحث في كل المنيو"
+              placeholder="ابحث في كل المنيو..."
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
@@ -530,7 +538,7 @@ function Menu({ data }) {
               <div className="results">
                 <h3>
                   {query.trim()
-                    ? `نتائج البحث في ${sectionTitle(section)}`
+                    ? "نتائج البحث في كل المنيو"
                     : cat === "@offers"
                       ? "العروض"
                       : cat || sectionTitle(section)}
@@ -549,7 +557,7 @@ function Menu({ data }) {
                       {i.offer && <span className="badge">عرض</span>}
                     </button>
                     <div className="card-body">
-                      <small>{i.category}</small>
+                      <small>{query.trim() ? `${sectionTitle(sectionOf(i))} · ${i.category}` : i.category}</small>
                       <h3>{i.name}</h3>
                       {i.variant && <p className="muted">{i.variant}</p>}
                       <div className="card-bottom">
