@@ -2,6 +2,24 @@
 
 Arabic RTL restaurant menu, built with React 18 and Vite. All 494 original items and 45 categories remain in `items.json` with their original names, categories and prices. Product images use the existing Foodics URLs; some are category photos.
 
+## Project structure
+
+```
+index.html, admin.html   Generated production files (served by GitHub Pages from main/root). Do not edit by hand.
+items.json               Published menu data, fetched at runtime. Edit or replace this file to change the menu.
+src/
+  app.html               Development entry page
+  main.jsx               App entry point
+  App.jsx                Chooses between the menu and the admin
+  components/            Menu, Admin, Settings, Modal, Photo, Icon, Greeting
+  lib/                   Helpers: storage, formatting, data validation, sections, order text, suggestions, defaults, admin tools
+  assets/                Brand logo
+  styles/style.css       All styles
+scripts/package-build.mjs  Bundles the Vite build into the single-file index.html and admin.html
+```
+
+index.html, admin.html and items.json stay in the repository root because GitHub Pages serves main/root.
+
 ## Development and build
 
 Requires Node 22.12+.
@@ -11,15 +29,14 @@ npm ci
 npm run dev
 ```
 
-Open `/app.html` during development, or `/app.html?preview=1` to preview a local draft. For the admin during development use the production admin.html, or serve the packaged output as below.
+Open `/src/app.html` during development, or `/src/app.html?preview=1` to preview a local draft. For the admin during development use the production admin.html, or serve the packaged output as below.
 
 ```sh
-npm run build
-node package-build.mjs
+npm run release
 python3 -m http.server 8080
 ```
 
-The packaging script generates root `index.html` and `admin.html` with React, styles and JavaScript bundled inside. GitHub Pages currently serves these committed production files from main/root, so no additional paid service is needed. After source changes, rebuild, package and commit both generated HTML files. Menu/settings changes need only `items.json`, no build.
+`npm run release` runs the Vite build and then `scripts/package-build.mjs`, which generates root `index.html` and `admin.html` with React, styles and JavaScript bundled inside. GitHub Pages currently serves these committed production files from main/root, so no additional paid service is needed. After source changes, rebuild, package and commit both generated HTML files. Menu/settings changes need only `items.json`, no build.
 
 ## Menu and checkout
 
