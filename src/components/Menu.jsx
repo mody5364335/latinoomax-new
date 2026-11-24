@@ -3,7 +3,7 @@ import { brandLogo } from "../assets/brandLogo.js";
 import { CART, read, store } from "../lib/storage.js";
 import { defaults } from "../lib/defaults.js";
 import { matchesSearch, money } from "../lib/format.js";
-import { sectionOf, sectionTitle, categoryRank } from "../lib/sections.js";
+import { sectionOf, sectionTitle, categoryRank, catKey } from "../lib/sections.js";
 import { suggestions } from "../lib/suggestions.js";
 import { internationalPhone, orderText } from "../lib/order.js";
 import { Greeting } from "./Greeting.jsx";
@@ -58,19 +58,23 @@ export function Menu({ data }) {
     qty = lines.reduce((a, l) => a + l.qty, 0);
   const deferredQuery = useDeferredValue(query);
   const cats = [
-      ...new Set(items.filter((i) => i.available && sectionOf(i) === section).map((i) => i.category)),
+      ...new Set(items.filter((i) => i.available && sectionOf(i) === section).map((i) => catKey(i))),
     ].sort((a, b) => (section === "main" ? categoryRank(a) - categoryRank(b) : 0)),
-    filtered = useMemo(() => items
+    filtered = useMemo(() => {
+      const seen = new Set();
+      return items
       .filter(
         (i) =>
           i.available &&
           (deferredQuery.trim() || sectionOf(i) === section) &&
           (deferredQuery.trim() ||
             !cat ||
-            (cat === "@offers" ? i.offer : i.category === cat)) &&
+            (cat === "@offers" ? i.offer : catKey(i) === cat)) &&
           (!deferredQuery.trim() || matchesSearch(i, deferredQuery)),
       )
-      .sort((a, b) => (section === "main" && !cat && !deferredQuery.trim() ? categoryRank(a.category) - categoryRank(b.category) : 0) || a.priority - b.priority), [items, section, cat, deferredQuery]);
+      .sort((a, b) => (section === "main" && !cat && !deferredQuery.trim() ? categoryRank(catKey(a)) - categoryRank(catKey(b)) : 0) || a.priority - b.priority)
+      .filter((i) => !i.group || (!seen.has(i.group) && seen.add(i.group)));
+    }, [items, section, cat, deferredQuery]);
   const featured = items
     .filter(
       (i) =>
@@ -124,8 +128,10 @@ export function Menu({ data }) {
     }, 100);
     return () => { clearInterval(timer); window.removeEventListener("pointerup", release); window.removeEventListener("pointercancel", release); };
   }, [featured.length]);
+  const sizesOf = (i) => i.group ? items.filter((x) => x.available && x.group === i.group).sort((a, b) => a.price - b.price) : [];
   function details(i) {
-    setSelected(i);
+    const sizes = sizesOf(i);
+    setSelected(sizes[0] || i);
     setExtra([]);
   }
   function add() {
@@ -359,22 +365,23 @@ export function Menu({ data }) {
                   <article className="card" key={i.id} onClick={() => details(i)}>
                     <button
                       className="card-photo"
-                      aria-label={"تفاصيل " + i.name}
+                      aria-label={"تفاصيل " + (i.group || i.name)}
                       onClick={() => details(i)}
                     >
                       <Photo item={i} />
                       {i.offer && <span className="badge">عرض</span>}
                     </button>
                     <div className="card-body">
-                      <small>{deferredQuery.trim() ? `${sectionTitle(sectionOf(i))} · ${i.category}` : i.category}</small>
-                      <h3>{i.name}</h3>
+                      <small>{deferredQuery.trim() ? `${sectionTitle(sectionOf(i))} · ${catKey(i)}` : catKey(i)}</small>
+                      <h3>{i.group || i.name}</h3>
                       {i.description && <p className="item-description">{i.description}</p>}
                       {i.variant && <p className="muted">{i.variant}</p>}
+                      {i.group && <p className="muted">{sizesOf(i).map((x) => x.size).join(" · ")}</p>}
                       <div className="card-bottom">
-                        <strong>{money(i.price)}</strong>
+                        <strong>{i.group ? <><small className="from">من </small>{money(Math.min(...sizesOf(i).map((x) => x.price)))}</> : money(i.price)}</strong>
                         <button
                           className="add"
-                          aria-label={"إضافة " + i.name}
+                          aria-label={"إضافة " + (i.group || i.name)}
                           onClick={() => details(i)}
                         >
                           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
@@ -495,12 +502,24 @@ export function Menu({ data }) {
         </div>
       )}
       {selected && (
-        <Modal title={selected.name} onClose={() => setSelected(null)}>
+        <Modal title={selected.group || selected.name} onClose={() => setSelected(null)}>
           <Photo item={selected} className="detail-photo" />
           <p>
             {selected.description || selected.category} {selected.variant}
           </p>
-          <strong>{money(selected.price)}</strong>
+          {selected.group ? (
+            <>
+              <h3>اختار الحجم</h3>
+              {sizesOf(selected).map((x) => (
+                <label className="check addon size" key={x.id}>
+                  <input type="radio" name="pizza-size" checked={x.id === selected.id}
+                    onChange={() => { setSelected(x); setExtra([]); }} />
+                  <span>{x.size}</span>
+                  <b>{money(x.price)}</b>
+                </label>
+              ))}
+            </>
+          ) : <strong>{money(selected.price)}</strong>}
           {suggestions(selected, items).length > 0 && (
             <>
               <h3>كمل طلبك</h3>
