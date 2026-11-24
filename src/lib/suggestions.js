@@ -17,6 +17,12 @@ export function suggestions(item, items) {
     return ["استافت كراست", "اطراف سوسيس", "رانش", "بربكيو", "تشيز صوص"]
       .map((n) => items.find((i) => i.available && i.category === "اضافات فود" && i.name.includes(n)))
       .filter(Boolean);
+  // البرجر: الصوصات (رانش، باربكيو، تشيز صوص، كاتشب) ثم الشيدر ثم مشروب.
+  if (item.category === "البرجر") {
+    const pick = (n) => items.find((i) => i.available && i.category === "اضافات فود" && i.name.includes(n));
+    const drink = items.find((i) => i.available && i.category === "مشروبات غازية");
+    return ["رانش", "بربكيو", "تشيز صوص", "كاتشب", "شيدر"].map(pick).concat(drink).filter(Boolean);
+  }
   let list = items
     .filter(
       (i) =>
