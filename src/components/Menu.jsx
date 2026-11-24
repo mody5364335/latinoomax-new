@@ -3,7 +3,7 @@ import { brandLogo } from "../assets/brandLogo.js";
 import { CART, read, store } from "../lib/storage.js";
 import { defaults } from "../lib/defaults.js";
 import { matchesSearch, money } from "../lib/format.js";
-import { sectionOf, sectionTitle } from "../lib/sections.js";
+import { sectionOf, sectionTitle, categoryRank } from "../lib/sections.js";
 import { suggestions } from "../lib/suggestions.js";
 import { internationalPhone, orderText } from "../lib/order.js";
 import { Greeting } from "./Greeting.jsx";
@@ -59,7 +59,7 @@ export function Menu({ data }) {
   const deferredQuery = useDeferredValue(query);
   const cats = [
       ...new Set(items.filter((i) => i.available && sectionOf(i) === section).map((i) => i.category)),
-    ],
+    ].sort((a, b) => (section === "main" ? categoryRank(a) - categoryRank(b) : 0)),
     filtered = useMemo(() => items
       .filter(
         (i) =>
@@ -70,7 +70,7 @@ export function Menu({ data }) {
             (cat === "@offers" ? i.offer : i.category === cat)) &&
           (!deferredQuery.trim() || matchesSearch(i, deferredQuery)),
       )
-      .sort((a, b) => a.priority - b.priority), [items, section, cat, deferredQuery]);
+      .sort((a, b) => (section === "main" && !cat && !deferredQuery.trim() ? categoryRank(a.category) - categoryRank(b.category) : 0) || a.priority - b.priority), [items, section, cat, deferredQuery]);
   const featured = items
     .filter(
       (i) =>
