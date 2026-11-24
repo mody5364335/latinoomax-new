@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
+    "package": "node scripts/package-build.mjs",
+    "release": "vite build && node scripts/package-build.mjs",
     "preview": "vite preview --host 0.0.0.0"
   },
   "keywords": [],
