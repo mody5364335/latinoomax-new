@@ -12,6 +12,11 @@ export function suggestions(item, items) {
     /بيتزا|برجر|سندوتش|كريب|تاكو|وجبات|الباستا|جريل|تشيكن|مقبلات|الكومبو/.test(
       item.category,
     );
+  // البيتزا: استافت كراست، اطراف سوسيس، وبعدهم الصوصات (رانش، باربكيو، تشيز صوص) من أصناف الإضافات. من غير مشروب.
+  if (/بيتزا/.test(item.category))
+    return ["استافت كراست", "اطراف سوسيس", "رانش", "بربكيو", "تشيز صوص"]
+      .map((n) => items.find((i) => i.available && i.category === "اضافات فود" && i.name.includes(n)))
+      .filter(Boolean);
   let list = items
     .filter(
       (i) =>
