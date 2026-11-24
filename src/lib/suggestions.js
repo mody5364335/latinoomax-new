@@ -6,6 +6,8 @@ export function suggestions(item, items) {
       .map((id) => items.find((i) => i.id === id))
       .filter((i) => i && i.available && i.id !== item.id);
   if (/اضافات|توصيل/.test(item.category)) return [];
+  // الحلو والمشروبات: مفيش اقتراحات إلا لو الصنف نفسه محدد له addonIds
+  if (item.section === "sweets" || item.section === "drinks") return [];
   let food =
     /بيتزا|برجر|سندوتش|كريب|تاكو|وجبات|الباستا|جريل|تشيكن|مقبلات|الكومبو/.test(
       item.category,
@@ -19,7 +21,7 @@ export function suggestions(item, items) {
           ? /استافت كراست|اطراف سوسيس/.test(i.name)
           : food
             ? i.category === "اضافات فود" && /شيدر|رانش/.test(i.name)
-            : /المشروبات الساخنه/.test(i.category)),
+            : false),
     )
     .slice(0, 2);
   if (food) {
@@ -30,3 +32,4 @@ export function suggestions(item, items) {
   }
   return list;
 }
+
