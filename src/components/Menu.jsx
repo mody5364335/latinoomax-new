@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useRef, useMemo, useDeferredValue } from "react";
 import { brandLogo } from "../assets/brandLogo.js";
+import { bullMark } from "../assets/bullMark.js";
 import { CART, read, store } from "../lib/storage.js";
 import { defaults } from "../lib/defaults.js";
 import { matchesSearch, money } from "../lib/format.js";
 import { sectionOf, sectionTitle, categoryRank, catKey } from "../lib/sections.js";
-import { suggestions } from "../lib/suggestions.js";
+import { suggestions, sauceSuggestions } from "../lib/suggestions.js";
 import { internationalPhone, orderText } from "../lib/order.js";
 import { Greeting } from "./Greeting.jsx";
 import { Photo } from "./Photo.jsx";
@@ -86,7 +87,7 @@ export function Menu({ data }) {
         (a.featuredPriority ?? a.priority) - (b.featuredPriority ?? b.priority),
     );
   const suggestCache = useMemo(() => new Map(), [items]);
-  function hasSuggestions(i) { let v = suggestCache.get(i.id); if (v === undefined) { v = suggestions(i, items).length > 0; suggestCache.set(i.id, v); } return v; }
+  function hasSuggestions(i) { let v = suggestCache.get(i.id); if (v === undefined) { v = suggestions(i, items).length + sauceSuggestions(i, items).length > 0; suggestCache.set(i.id, v); } return v; }
   const [offerIndex, setOfferIndex] = useState(0);
   const offerIndexRef = useRef(0), offerHolding = useRef(false);
   const offerNextAt = useRef(Date.now() + 6000);
@@ -209,8 +210,8 @@ export function Menu({ data }) {
     }
   }
   const hero =
-    items.find((i) => /بيتزا/.test(i.category) && i.image) ||
-    items.find((i) => i.image);
+    items.find((i) => i.available && /بيتزا/.test(i.category) && i.image) ||
+    items.find((i) => i.available && i.image);
   return (
     <>
       <header className="menu-header">
@@ -298,7 +299,7 @@ export function Menu({ data }) {
               شوف المنيو ↙
             </a>
             <div className="hero-note">
-              {items.length} اختيار · طلبك على مزاجك
+              {items.filter((i) => i.available).length} اختيار · طلبك على مزاجك
             </div>
           </div>
           <div className="hero-photo">
@@ -421,9 +422,12 @@ export function Menu({ data }) {
               <p className="eyebrow">LATINOO MAX · GET IN TOUCH</p>
               <h2>{s.contactsTitle}</h2>
             </div>
-            <span className="contact-mark" aria-hidden="true">
-              ✳
-            </span>
+            <img
+              className="contact-mark"
+              src={bullMark}
+              alt=""
+              aria-hidden="true"
+            />
           </div>
           <div className="branch-grid">
             {(Array.isArray(s.branches) ? s.branches : [])
@@ -519,32 +523,61 @@ export function Menu({ data }) {
                 </label>
               ))}
             </>
-          ) : <strong>{money(selected.price)}</strong>}
-          {suggestions(selected, items).length > 0 && (
+          ) : /بيتزا كبير/.test(selected.category) ? (
             <>
-              <h3>كمل طلبك</h3>
-              <p className="muted">
-                إضافات اختيارية بأسعارها. راجع حساسيات الطعام مع المطعم.
-              </p>
-              {suggestions(selected, items).map((a) => (
-                <label className="check addon" key={a.id}>
-                  <input
-                    type="checkbox"
-                    checked={extra.includes(a.id)}
-                    onChange={(e) =>
-                      setExtra(
-                        e.target.checked
-                          ? [...extra, a.id]
-                          : extra.filter((id) => id !== a.id),
-                      )
-                    }
-                  />
-                  <span>{a.name}</span>
-                  <b>+ {money(a.price)}</b>
-                </label>
-              ))}
+              <h3>اختار الحجم</h3>
+              <label className="check addon size unavailable">
+                <input type="radio" name="pizza-size" disabled />
+                <span>وسط</span>
+                <b className="muted">مش متاح</b>
+              </label>
+              <label className="check addon size">
+                <input type="radio" name="pizza-size" checked readOnly />
+                <span>كبير</span>
+                <b>{money(selected.price)}</b>
+              </label>
             </>
-          )}
+          ) : <strong>{money(selected.price)}</strong>}
+          {(() => {
+            const addonRow = (a) => (
+              <label className="check addon" key={a.id}>
+                <input
+                  type="checkbox"
+                  checked={extra.includes(a.id)}
+                  onChange={(e) =>
+                    setExtra(
+                      e.target.checked
+                        ? [...extra, a.id]
+                        : extra.filter((id) => id !== a.id),
+                    )
+                  }
+                />
+                <span>{a.name}</span>
+                <b>+ {money(a.price)}</b>
+              </label>
+            );
+            const addons = suggestions(selected, items);
+            const sauces = sauceSuggestions(selected, items);
+            return (
+              <>
+                {addons.length > 0 && (
+                  <>
+                    <h3>كمل طلبك</h3>
+                    <p className="muted">
+                      إضافات اختيارية بأسعارها. راجع حساسيات الطعام مع المطعم.
+                    </p>
+                    {addons.map(addonRow)}
+                  </>
+                )}
+                {sauces.length > 0 && (
+                  <>
+                    <h3>إضافة الصوصات</h3>
+                    {sauces.map(addonRow)}
+                  </>
+                )}
+              </>
+            );
+          })()}
           <button className="accent full" onClick={add}>
             <span>أضف للسلة</span>
             <bdi>{money(
