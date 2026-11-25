@@ -510,31 +510,12 @@ export function Menu({ data }) {
             href="https://wa.me/201040580225"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="واتساب فريق قدرة"
+            aria-label="تواصل معنا على واتساب"
           >
             <Icon type="chat" />
-            واتساب
+            <span>get in touch</span>
+            <b dir="ltr">01040580225</b>
           </a>
-          <div className="credit-links">
-            <a
-              className="credit-link"
-              href="https://www.instagram.com/qodra.studio/"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="انستجرام فريق قدرة"
-            >
-              <Icon type="instagram" />
-              Instagram
-            </a>
-            <a
-              className="credit-link"
-              href="tel:+201040580225"
-              aria-label="اتصل بفريق قدرة"
-            >
-              <Icon type="phone" />
-              <b dir="ltr">01040580225</b>
-            </a>
-          </div>
         </div>
       </footer>
       {qty > 0 && !open && (
