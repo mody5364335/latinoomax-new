@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, useMemo, useDeferredValue } from "react";
 import { brandLogo } from "../assets/brandLogo.js";
 import { bullMark } from "../assets/bullMark.js";
+import { qodraLogo } from "../assets/qodraLogo.js";
 import { CART, read, store } from "../lib/storage.js";
 import { defaults } from "../lib/defaults.js";
 import { matchesSearch, money } from "../lib/format.js";
@@ -492,6 +493,42 @@ export function Menu({ data }) {
           المطعم.
         </p>
         <a href="./admin.html">محرر المنيو المحلي</a>
+        <div className="credit">
+          <p className="credit-line">
+            <img className="credit-logo" src={qodraLogo} alt="قدرة" />
+            تم إنشاءه بواسطة فريق <b>(قدرة | Qodra)</b>
+          </p>
+          <div className="credit-links">
+            <a
+              className="credit-link"
+              href="https://www.instagram.com/qodra.studio/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="انستجرام فريق قدرة"
+            >
+              <Icon type="instagram" />
+              Instagram
+            </a>
+            <a
+              className="credit-link"
+              href="tel:+201040580225"
+              aria-label="اتصل بفريق قدرة"
+            >
+              <Icon type="phone" />
+              <b dir="ltr">01040580225</b>
+            </a>
+            <a
+              className="credit-link credit-wa"
+              href="https://wa.me/201040580225"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="واتساب فريق قدرة"
+            >
+              <Icon type="chat" />
+              واتساب
+            </a>
+          </div>
+        </div>
       </footer>
       {qty > 0 && !open && (
         <button className="floating" onClick={() => setOpen(true)}>
