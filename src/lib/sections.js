@@ -1,6 +1,8 @@
 
 
 export const sweetCategories = new Set(["الحلو", "الوافل", "الكعك والبسكويت", "الايس كريم", "ايس كريم تارتات"]);
+// سجلات الإضافات (مش أصناف قائمة بذاتها): ما تظهرش ككروت في نتائج البحث، بطلب يوسف 25 نوفمبر 2026
+export const addonCategories = new Set(["اضافات فود", "اضافات بار", "اضافات فلفر"]);
 export const drinkCategories = new Set(["ميلك شيك", "مشروبات غازية", "عصائر رمضان", "العصائر", "سموزى", "المشروبات الساخنه", "ايس ماتشا", "القهوه المثلجه", "فراابيه", "الكوكتيلات", "الزبادي", "ميكسات زبادي", "ميكسات سموزي", "هوت ماتشا", "اضافات بار", "اضافات فلفر"]);
 export const sectionOf = (item) => ["main", "sweets", "drinks"].includes(item.section)
   ? item.section : sweetCategories.has(item.category) ? "sweets" : drinkCategories.has(item.category) ? "drinks" : "main";

@@ -4,7 +4,7 @@ import { bullMark } from "../assets/bullMark.js";
 import { CART, read, store } from "../lib/storage.js";
 import { defaults } from "../lib/defaults.js";
 import { matchesSearch, money } from "../lib/format.js";
-import { sectionOf, sectionTitle, categoryRank, catKey } from "../lib/sections.js";
+import { addonCategories, sectionOf, sectionTitle, categoryRank, catKey } from "../lib/sections.js";
 import { suggestions, sauceSuggestions } from "../lib/suggestions.js";
 import { internationalPhone, orderText } from "../lib/order.js";
 import { Greeting } from "./Greeting.jsx";
@@ -71,6 +71,7 @@ export function Menu({ data }) {
           (deferredQuery.trim() ||
             !cat ||
             (cat === "@offers" ? i.offer : catKey(i) === cat)) &&
+          (!deferredQuery.trim() || !addonCategories.has(i.category)) &&
           (!deferredQuery.trim() || matchesSearch(i, deferredQuery)),
       )
       .sort((a, b) => (section === "main" && !cat && !deferredQuery.trim() ? categoryRank(catKey(a)) - categoryRank(catKey(b)) : 0) || a.priority - b.priority)
@@ -344,7 +345,7 @@ export function Menu({ data }) {
               <div className="category-filter" key={section} aria-label="تصفية حسب النوع">
                 {[["", "كل الأصناف"], ["@offers", "العروض"], ...cats.map((c) => [c, c])].map(([id, title]) => (
                   <button key={id} aria-pressed={!deferredQuery.trim() && cat === id} className={!deferredQuery.trim() && cat === id ? "active" : ""}
-                    onClick={() => { setCat(id); setCount(24); }}>
+                    onClick={() => { setCat(id); setQuery(""); setCount(24); }}>
                     {title}
                   </button>
                 ))}
