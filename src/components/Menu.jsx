@@ -207,7 +207,8 @@ export function Menu({ data }) {
       setError(t("errRecv"));
       return;
     }
-    const text = orderText(s, customer, lines, total);
+    // الرسالة تتكتب بالعربي دايماً (قرار محمد): نستخدم إعدادات المنيو الأصلية مش ترجمات الواجهة
+    const text = orderText(base, customer, lines, total);
     // Clear on a valid order tap, independently of the WhatsApp popup result.
     if (s.clearCart) {
       setCart([]);
