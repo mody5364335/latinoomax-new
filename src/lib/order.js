@@ -1,7 +1,11 @@
 import { money } from "./format.js";
 import { defaults } from "./defaults.js";
 
+// رسالة الطلب على واتساب تكتب بالعربي في الحالتين، حتى لو الواجهة إنجليزي (قرار محمد 26 نوفمبر 2026).
+// اختيار الشطة يظهر على سطر الصنف: (حار) أو (عادي) للأصناف اللي عليها الاختيار.
 export function orderText(s, customer, lines, total) {
+  const spice = (l) =>
+    l.spice == null ? "" : l.spice ? " (حار)" : " (عادي)";
   return [
     s.whatsappTitle,
     "نوع الطلب: " +
@@ -11,7 +15,7 @@ export function orderText(s, customer, lines, total) {
     s.phoneLabel + ": " + customer.phone,
     "",
     ...lines.flatMap((l, n) => [
-      `${n + 1}. ${l.item.name}${l.item.variant ? " (" + l.item.variant + ")" : ""}`,
+      `${n + 1}. ${l.item.name}${l.item.variant ? " (" + l.item.variant + ")" : ""}${spice(l)}`,
       `الكمية: ${l.qty} × سعر الصنف: ${money(l.item.price)}`,
       ...l.addons.map(
         (a) =>

@@ -4,8 +4,10 @@ import { bullMark } from "../assets/bullMark.js";
 import { qodraLockup } from "../assets/qodraLockup.js";
 import { CART, read, store } from "../lib/storage.js";
 import { defaults } from "../lib/defaults.js";
-import { matchesSearch, money } from "../lib/format.js";
-import { addonCategories, sectionOf, sectionTitle, categoryRank, catKey } from "../lib/sections.js";
+import { matchesSearch } from "../lib/format.js";
+import { matchesEn, getLang, saveLang, makeT, enSettings, enBranch, locName, locGroup, locDesc, locSize, locCat, locCatKey, sectionEn, fmtMoney } from "../lib/i18n.js";
+import { Hours } from "./Hours.jsx";
+import { addonCategories, sectionOf, sectionTitle, categoryRank, catKey, hasSpice, spicyDefault } from "../lib/sections.js";
 import { suggestions, sauceSuggestions } from "../lib/suggestions.js";
 import { internationalPhone, orderText } from "../lib/order.js";
 import { Greeting } from "./Greeting.jsx";
@@ -14,14 +16,32 @@ import { Modal } from "./Modal.jsx";
 import { Icon } from "./Icon.jsx";
 
 export function Menu({ data }) {
-  const s = { ...defaults, ...data.settings },
+  const [lang, setLangState] = useState(getLang);
+  const t = makeT(lang), isEn = lang === "en";
+  const money = (n) => fmtMoney(lang, n);
+  const setLang = (l) => { setLangState(l); saveLang(l); };
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = isEn ? "ltr" : "rtl";
+    document.title = t("title");
+  }, [lang]);
+  const base = { ...defaults, ...data.settings };
+  // English only replaces a setting still at its default; custom settings are shown as written.
+  const s = isEn ? Object.fromEntries(Object.entries(base).map(([k, v]) => [k, enSettings[k] && v === defaults[k] ? enSettings[k] : v])) : base,
     items = data.items;
+  const secTitle = (id) => (isEn ? sectionEn[id] || sectionEn.main : sectionTitle(id));
+  const isDefaultBranch = (b) => b.name === defaults.branches[0].name;
+  const bName = (b) => (isEn && isDefaultBranch(b) ? enBranch.name : b.name);
+  const bAddr = (b) => (isEn && isDefaultBranch(b) ? enBranch.address : b.address);
+  const iName = (i) => locName(lang, i);
+  const iDesc = (i) => locDesc(lang, i.description);
   const [query, setQuery] = useState(""),
     [section, setSection] = useState("main"),
     [cat, setCat] = useState(""),
     [count, setCount] = useState(24),
     [selected, setSelected] = useState(null),
     [extra, setExtra] = useState([]),
+    [spice, setSpice] = useState(false),
     [cart, setCart] = useState(() => read(CART, [])),
     [open, setOpen] = useState(false),
     [notice, setNotice] = useState(""),
@@ -38,7 +58,7 @@ export function Menu({ data }) {
     try {
       store(CART, cart);
     } catch {
-      setError("تعذر حفظ السلة في المتصفح");
+      setError(t("errStore"));
     }
   }, [cart]);
   const lines = cart
@@ -73,7 +93,7 @@ export function Menu({ data }) {
             !cat ||
             (cat === "@offers" ? i.offer : catKey(i) === cat)) &&
           (!deferredQuery.trim() || !addonCategories.has(i.category)) &&
-          (!deferredQuery.trim() || matchesSearch(i, deferredQuery)),
+          (!deferredQuery.trim() || matchesSearch(i, deferredQuery) || matchesEn(i, deferredQuery)),
       )
       .sort((a, b) => (section === "main" && !cat && !deferredQuery.trim() ? categoryRank(catKey(a)) - categoryRank(catKey(b)) : 0) || a.priority - b.priority)
       .filter((i) => !i.group || (!seen.has(i.group) && seen.add(i.group)));
@@ -134,22 +154,25 @@ export function Menu({ data }) {
   const sizesOf = (i) => i.group ? items.filter((x) => x.available && x.group === i.group).sort((a, b) => a.price - b.price) : [];
   function details(i) {
     const sizes = sizesOf(i);
-    setSelected(sizes[0] || i);
+    const first = sizes[0] || i;
+    setSelected(first);
     setExtra([]);
+    setSpice(hasSpice(first) && spicyDefault(first));
   }
   function add() {
     let extras = [...extra].sort(),
-      key = selected.id + "|" + extras.join(",");
+      sp = hasSpice(selected) ? spice : null,
+      key = selected.id + "|" + extras.join(",") + (sp === null ? "" : sp ? "|hot" : "|normal");
     setCart((c) => {
       let found = c.find((l) => l.key === key);
       return found
         ? c.map((l) =>
             l.key === key ? { ...l, qty: Math.min(l.qty + 1, 99) } : l,
           )
-        : [...c, { key, id: selected.id, extras, qty: 1 }];
+        : [...c, { key, id: selected.id, extras, qty: 1, spice: sp }];
     });
     setSelected(null);
-    setNotice("اتضاف للسلة ✓");
+    setNotice(t("addedToast"));
     setTimeout(() => setNotice(""), 2500);
   }
   function change(key, delta) {
@@ -170,18 +193,18 @@ export function Menu({ data }) {
       (customer.type === "delivery" && !s.deliveryEnabled) ||
       (customer.type === "dineIn" && !s.dineInEnabled)
     ) {
-      setError("نوع الطلب غير متاح حالياً");
+      setError(t("errType"));
       return;
     }
     let phone = customer.phone
       .replace(/[٠-٩]/g, (c) => "٠١٢٣٤٥٦٧٨٩".indexOf(c))
       .replace(/[\s()+-]/g, "");
     if (customer.phone && !/^\d{8,15}$/.test(phone)) {
-      setError("اكتب رقم هاتف صحيح من 8 إلى 15 رقم");
+      setError(t("errPhone"));
       return;
     }
     if (!/^\d{10,15}$/.test(s.orderPhone)) {
-      setError("استقبال الطلبات غير متاح. راجع المطعم.");
+      setError(t("errRecv"));
       return;
     }
     const text = orderText(s, customer, lines, total);
@@ -202,12 +225,12 @@ export function Menu({ data }) {
       if (win) win.opener = null;
       setNotice(
         win
-          ? "رسالتك جاهزة في واتساب. اضغط إرسال هناك لتأكيد الطلب."
-          : "المتصفح منع فتح واتساب. السلة اتفضت؛ اسمح بالنوافذ المنبثقة قبل طلب جديد.",
+          ? t("waReady")
+          : t("waBlocked"),
       );
     } catch {
       setNotice(
-        "تعذر فتح واتساب. السلة اتفضت؛ راجع إعدادات المتصفح قبل طلب جديد.",
+        t("waFail"),
       );
     }
   }
@@ -222,42 +245,44 @@ export function Menu({ data }) {
             <img className="brand-logo" src={brandLogo} alt={s.brand} />
           </span>
         </a>
-        <Greeting />
+        <Greeting t={t} />
+        <button className="lang-toggle" lang={isEn ? "ar" : "en"} aria-label={t("langAria")}
+          onClick={() => setLang(isEn ? "ar" : "en")}>{t("langBtn")}</button>
         <button className="primary" onClick={() => setOpen(true)}>
-          السلة <span className="bubble">{qty}</span>
+          {t("cart")} <span className="bubble">{qty}</span>
         </button>
       </header>
       <main>
         {new URLSearchParams(location.search).has("preview") && (
           <div className="notice">
-            معاينة المسودة المحلية، التغييرات لم تنشر للعملاء.
+            {t("previewNotice")}
           </div>
         )}
         {s.featuredEnabled && featured.length > 0 && (
-          <section className="featured" aria-label="اختيارات مميزة"
+          <section className="featured" aria-label={t("featuredAria")}
             onPointerDownCapture={holdOffers} onPointerUpCapture={releaseOffers}
             onPointerCancelCapture={releaseOffers} onWheelCapture={pauseOffers}
             onKeyDownCapture={pauseOffers} onClickCapture={pauseOffers}>
             <div className="section-head">
               <div>
-                <p className="eyebrow">اختيارات لاتينو</p>
+                <p className="eyebrow">{t("eyebrowPicks")}</p>
                 <h2>{s.featuredTitle}</h2>
               </div>
               <div className="offer-controls">
-                <span className="muted">اختار عرضك المفضل</span>
+                <span className="muted">{t("pickOffer")}</span>
                 <button
-                  className="offer-arrow"
-                  aria-label="العروض السابقة"
+                  className="offer-arrow offer-prev"
+                  aria-label={t("prevOffers")}
                   onClick={() => goOffer(offerIndexRef.current - 1)}
                 >
-                  →
+                  {isEn ? "←" : "→"}
                 </button>
                 <button
-                  className="offer-arrow"
-                  aria-label="العروض التالية"
+                  className="offer-arrow offer-next"
+                  aria-label={t("nextOffers")}
                   onClick={() => goOffer(offerIndexRef.current + 1)}
                 >
-                  ←
+                  {isEn ? "→" : "←"}
                 </button>
               </div>
             </div>
@@ -274,18 +299,18 @@ export function Menu({ data }) {
                   </span>
                   <span className="feature-copy">
                     <small>
-                      {i.featuredBadge || (i.offer ? "عرض مميز" : "من المنيو")}
+                      {isEn ? (i.offer ? t("offerBadge") : t("fromMenu")) : (i.featuredBadge || (i.offer ? t("offerBadge") : t("fromMenu")))}
                     </small>
-                    <b>{i.featuredTitle || i.name}</b>
+                    <b>{isEn ? iName(i) : (i.featuredTitle || i.name)}</b>
                     <span>
-                      <strong>{money(i.price)}</strong> <i>شوف التفاصيل +</i>
+                      <strong>{money(i.price)}</strong> <i>{t("seeDetails")}</i>
                     </span>
                   </span>
                 </button>
               ))}
             </div>
-            <div className="offer-pagination" aria-label="موضع العرض">
-              <div className="offer-bars">{featured.map((item,index) => <button key={item.id} className={offerIndex === index ? "current" : ""} aria-label={`العرض ${index+1} من ${featured.length}`} aria-current={offerIndex === index ? "true" : undefined} onClick={() => goOffer(index)} />)}</div>
+            <div className="offer-pagination" aria-label={t("offerPos")}>
+              <div className="offer-bars">{featured.map((item,index) => <button key={item.id} className={offerIndex === index ? "current" : ""} aria-label={t("offerN", {i: index+1, n: featured.length})} aria-current={offerIndex === index ? "true" : undefined} onClick={() => goOffer(index)} />)}</div>
             </div>
           </section>
         )}
@@ -295,10 +320,10 @@ export function Menu({ data }) {
             <h1>{s.heroTitle}</h1>
             <p>{s.heroText}</p>
             <a className="accent" href="#menu">
-              شوف المنيو ↙
+              {t("seeMenu")}
             </a>
             <div className="hero-note">
-              {items.filter((i) => i.available).length} اختيار · طلبك على مزاجك
+              {t("heroNote", { n: items.filter((i) => i.available).length })}
             </div>
           </div>
           <div className="hero-photo">
@@ -315,13 +340,13 @@ export function Menu({ data }) {
         <section id="menu">
           <div className="section-head menu-head">
             <div>
-              <p className="eyebrow">على مزاجك</p>
-              <h2>هتطلب إيه النهارده؟</h2>
+              <p className="eyebrow">{t("eyebrowMood")}</p>
+              <h2>{t("orderToday")}</h2>
             </div>
             <input
               className="search"
-              aria-label="ابحث في كل المنيو"
-              placeholder="ابحث في كل المنيو..."
+              aria-label={t("searchAria")}
+              placeholder={t("searchPh")}
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
@@ -330,18 +355,18 @@ export function Menu({ data }) {
             />
           </div>
           <div className="menu-layout">
-            <nav className="categories" aria-label="أقسام المنيو">
-              <div className="menu-sections" aria-label="الأقسام الرئيسية">
+            <nav className="categories" aria-label={t("catsAria")}>
+              <div className="menu-sections" aria-label={t("mainSecAria")}>
                 {["main", "sweets", "drinks"].map((id) => (
                   <button key={id} className={section === id ? "active" : ""}
                     aria-pressed={section === id}
                     onClick={() => { setSection(id); setCat(""); setQuery(""); setCount(24); }}>
-                    {sectionTitle(id)}
+                    {secTitle(id)}
                   </button>
                 ))}
               </div>
-              <div className="category-filter" key={section} aria-label="تصفية حسب النوع">
-                {[["", "كل الأصناف"], ["@offers", "العروض"], ...cats.map((c) => [c, c])].map(([id, title]) => (
+              <div className="category-filter" key={section} aria-label={t("filterAria")}>
+                {[["", t("allItems")], ["@offers", t("offers")], ...cats.map((c) => [c, locCat(lang, c)])].map(([id, title]) => (
                   <button key={id} aria-pressed={!deferredQuery.trim() && cat === id} className={!deferredQuery.trim() && cat === id ? "active" : ""}
                     onClick={() => { setCat(id); setQuery(""); setCount(24); }}>
                     {title}
@@ -353,35 +378,35 @@ export function Menu({ data }) {
               <div className="results">
                 <h3>
                   {deferredQuery.trim()
-                    ? "نتائج البحث في كل المنيو"
+                    ? t("searchResults")
                     : cat === "@offers"
-                      ? "العروض"
-                      : cat || sectionTitle(section)}
+                      ? t("offers")
+                      : cat ? locCat(lang, cat) : secTitle(section)}
                 </h3>
-                <span>{filtered.length} صنف</span>
+                <span>{t("nItems", { n: filtered.length })}</span>
               </div>
               <div className="grid">
                 {filtered.slice(0, count).map((i) => (
                   <article className="card" key={i.id} onClick={() => details(i)}>
                     <button
                       className="card-photo"
-                      aria-label={"تفاصيل " + (i.group || i.name)}
+                      aria-label={t("details", { x: i.group ? locGroup(lang, i.group) : iName(i) })}
                       onClick={() => details(i)}
                     >
                       <Photo item={i} />
-                      {i.offer && <span className="badge">عرض</span>}
+                      {i.offer && <span className="badge">{t("offerTag")}</span>}
                     </button>
                     <div className="card-body">
-                      <small>{deferredQuery.trim() ? `${sectionTitle(sectionOf(i))} · ${catKey(i)}` : catKey(i)}</small>
-                      <h3>{i.group || i.name}</h3>
-                      {i.description && <p className="item-description">{i.description}</p>}
+                      <small>{deferredQuery.trim() ? `${secTitle(sectionOf(i))} · ${locCatKey(lang, i)}` : locCatKey(lang, i)}</small>
+                      <h3>{i.group ? locGroup(lang, i.group) : iName(i)}</h3>
+                      {i.description && <p className="item-description">{iDesc(i)}</p>}
                       {i.variant && <p className="muted">{i.variant}</p>}
-                      {i.group && <p className="muted">{sizesOf(i).map((x) => x.size).join(" · ")}</p>}
+                      {i.group && <p className="muted">{sizesOf(i).map((x) => locSize(lang, x.size)).join(" · ")}</p>}
                       <div className="card-bottom">
-                        <strong>{i.group ? <><small className="from">من </small>{money(Math.min(...sizesOf(i).map((x) => x.price)))}</> : money(i.price)}</strong>
+                        <strong>{i.group ? <><small className="from">{t("from")}</small>{money(Math.min(...sizesOf(i).map((x) => x.price)))}</> : money(i.price)}</strong>
                         <button
                           className="add"
-                          aria-label={"إضافة " + (i.group || i.name)}
+                          aria-label={t("addX", { x: i.group ? locGroup(lang, i.group) : iName(i) })}
                           onClick={() => details(i)}
                         >
                           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
@@ -392,22 +417,22 @@ export function Menu({ data }) {
                         onClick={() => details(i)}
                       >
                         {hasSuggestions(i)
-                          ? "كمل طلبك بإضافات ↗"
-                          : "تفاصيل الصنف ↗"}
+                          ? t("completeOrder")
+                          : t("itemDetails")}
                       </button>
                     </div>
                   </article>
                 ))}
               </div>
               {!filtered.length && (
-                <div className="empty">مفيش نتائج، جرب اسم تاني.</div>
+                <div className="empty">{t("noResults")}</div>
               )}
               {count < filtered.length && (
                 <button
                   className="secondary more"
                   onClick={() => setCount(count + 24)}
                 >
-                  عرض أصناف أكتر ↓
+                  {t("moreItems")}
                 </button>
               )}
             </div>
@@ -418,7 +443,7 @@ export function Menu({ data }) {
         <section className="contacts" aria-label={s.contactsTitle}>
           <div className="section-head">
             <div>
-              <p className="eyebrow">LATINOO MAX · GET IN TOUCH</p>
+              <p className="eyebrow">{t("contactsEyebrow")}</p>
               <h2>{s.contactsTitle}</h2>
             </div>
             <img
@@ -428,6 +453,7 @@ export function Menu({ data }) {
               aria-hidden="true"
             />
           </div>
+          <Hours t={t} lang={lang} />
           <div className="branch-grid">
             {(Array.isArray(s.branches) ? s.branches : [])
               .filter((b) => b.name && (b.phones?.length || b.phone))
@@ -435,12 +461,12 @@ export function Menu({ data }) {
                 <article className="branch-card" key={idx}>
                   <h3>
                     <span className="branch-dot" aria-hidden="true" />
-                    {b.name}
+                    {bName(b)}
                   </h3>
                   {b.address && (
                     <p className="branch-address">
                       <Icon type="pin" />
-                      {b.address}
+                      {bAddr(b)}
                     </p>
                   )}
                   <div className="branch-phones">
@@ -449,7 +475,7 @@ export function Menu({ data }) {
                         <a
                           className="branch-call"
                           href={"tel:" + phone.replace(/[^+0-9]/g, "")}
-                          aria-label={"اتصل بـ " + b.name + " " + (n + 1)}
+                          aria-label={t("callX", { x: bName(b), n: n + 1 })}
                         >
                           <Icon type="phone" />
                           <b dir="ltr">{phone}</b>
@@ -459,7 +485,7 @@ export function Menu({ data }) {
                           href={"https://wa.me/" + internationalPhone(phone)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          aria-label={"واتساب " + b.name + " " + (n + 1)}
+                          aria-label={t("waX", { x: bName(b), n: n + 1 })}
                         >
                           <Icon type="chat" />
                         </a>
@@ -474,7 +500,7 @@ export function Menu({ data }) {
             s.branches.some((b) => b.name && (b.phones?.length || b.phone))
           ) && (
             <p className="contacts-empty">
-              بيانات الفروع وأرقام التواصل هتتوفر قريباً.
+              {t("contactsEmpty")}
             </p>
           )}
         </section>
@@ -482,20 +508,18 @@ export function Menu({ data }) {
       <footer>
         <b className="foot-brand"><img className="foot-mark" src={bullMark} alt="" aria-hidden="true" />{s.brand}</b>
         <p>
-          الأسعار بالجنيه المصري ولا تشمل رسوم التوصيل. بعض الصور خاصة بالقسم
-          وليست بالصنف.
+          {t("footPrices")}
         </p>
         <p>
-          الطلب بيتبعت كرسالة واتساب. تأكيد الطلب ورسوم التوصيل بيكونوا مع
-          المطعم.
+          {t("footOrder")}
         </p>
-        <a href="./admin.html">محرر المنيو المحلي</a>
+        <a href="./admin.html">{t("adminLink")}</a>
         <div className="credit">
           <p className="credit-rights" dir="ltr">
             LatinooMax Restaurant &amp; Cafe. All Rights Reserved 2026 - 2027
           </p>
           <p className="credit-dev">
-            <span>تطوير</span>
+            <span>{t("devBy")}</span>
             <img
               className="credit-lockup"
               src={qodraLockup}
@@ -507,7 +531,7 @@ export function Menu({ data }) {
             href="https://wa.me/201040580225"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="تواصل معنا على واتساب"
+            aria-label={t("waAria")}
           >
             <Icon type="chat" />
             <span>get in touch</span>
@@ -518,9 +542,9 @@ export function Menu({ data }) {
       {qty > 0 && !open && (
         <button className="floating" onClick={() => setOpen(true)}>
           <span>
-            شوف سلتك <b>{qty}</b>
+            {t("viewCart")} <b>{qty}</b>
           </span>
-          <strong>{money(total)} ←</strong>
+          <strong>{money(total)} {isEn ? "→" : "←"}</strong>
         </button>
       )}
       {notice && (
@@ -529,38 +553,51 @@ export function Menu({ data }) {
         </div>
       )}
       {selected && (
-        <Modal title={selected.group || selected.name} onClose={() => setSelected(null)}>
+        <Modal title={selected.group ? locGroup(lang, selected.group) : iName(selected)} closeLabel={t("close")} onClose={() => setSelected(null)}>
           <Photo item={selected} className="detail-photo" />
           <p>
-            {selected.description || selected.category} {selected.variant}
+            {selected.description ? iDesc(selected) : locCat(lang, selected.category)} {selected.variant}
           </p>
           {selected.group ? (
             <>
-              <h3>اختار الحجم</h3>
+              <h3>{t("chooseSize")}</h3>
               {sizesOf(selected).map((x) => (
                 <label className="check addon size" key={x.id}>
                   <input type="radio" name="pizza-size" checked={x.id === selected.id}
                     onChange={() => { setSelected(x); setExtra([]); }} />
-                  <span>{x.size}</span>
+                  <span>{locSize(lang, x.size)}</span>
                   <b>{money(x.price)}</b>
                 </label>
               ))}
             </>
           ) : /بيتزا كبير/.test(selected.category) ? (
             <>
-              <h3>اختار الحجم</h3>
+              <h3>{t("chooseSize")}</h3>
               <label className="check addon size unavailable">
                 <input type="radio" name="pizza-size" disabled />
-                <span>وسط</span>
-                <b className="muted">مش متاح</b>
+                <span>{t("medium")}</span>
+                <b className="muted">{t("unavailable")}</b>
               </label>
               <label className="check addon size">
                 <input type="radio" name="pizza-size" checked readOnly />
-                <span>كبير</span>
+                <span>{t("large")}</span>
                 <b>{money(selected.price)}</b>
               </label>
             </>
           ) : <strong>{money(selected.price)}</strong>}
+          {hasSpice(selected) && (
+            <>
+              <h3>{t("spiceTitle")}</h3>
+              <label className="check addon size">
+                <input type="radio" name="spice" checked={!spice} onChange={() => setSpice(false)} />
+                <span>{t("spiceNormal")}</span>
+              </label>
+              <label className="check addon size">
+                <input type="radio" name="spice" checked={spice} onChange={() => setSpice(true)} />
+                <span>{t("spiceHot")}</span>
+              </label>
+            </>
+          )}
           {(() => {
             const addonRow = (a) => (
               <label className="check addon" key={a.id}>
@@ -575,7 +612,7 @@ export function Menu({ data }) {
                     )
                   }
                 />
-                <span>{a.name}</span>
+                <span>{iName(a)}</span>
                 <b>+ {money(a.price)}</b>
               </label>
             );
@@ -585,16 +622,16 @@ export function Menu({ data }) {
               <>
                 {addons.length > 0 && (
                   <>
-                    <h3>كمل طلبك</h3>
+                    <h3>{t("completeTitle")}</h3>
                     <p className="muted">
-                      إضافات اختيارية بأسعارها. راجع حساسيات الطعام مع المطعم.
+                      {t("addonsNote")}
                     </p>
                     {addons.map(addonRow)}
                   </>
                 )}
                 {sauces.length > 0 && (
                   <>
-                    <h3>إضافة الصوصات</h3>
+                    <h3>{t("sauces")}</h3>
                     {sauces.map(addonRow)}
                   </>
                 )}
@@ -602,7 +639,7 @@ export function Menu({ data }) {
             );
           })()}
           <button className="accent full" onClick={add}>
-            <span>أضف للسلة</span>
+            <span>{t("addToCart")}</span>
             <bdi>{money(
               selected.price +
                 extra.reduce(
@@ -615,11 +652,11 @@ export function Menu({ data }) {
         </Modal>
       )}
       {open && (
-        <Modal title="سلتك" onClose={() => setOpen(false)}>
+        <Modal title={t("yourCart")} closeLabel={t("close")} onClose={() => setOpen(false)}>
           {lines.length ? (
             <>
               <div className="cart-toolbar">
-                <span>{qty} صنف في سلتك</span>
+                <span>{t("cartCount", { n: qty })}</span>
                 <button
                   type="button"
                   className="clear-cart"
@@ -630,30 +667,33 @@ export function Menu({ data }) {
                     } catch {}
                   }}
                 >
-                  تفريغ السلة ×
+                  {t("clearCart")}
                 </button>
               </div>
               <div className="cart-lines">
                 {lines.map((l) => (
                   <div className="cart-line" key={l.key}>
                     <div>
-                      <b>{l.item.name}</b>
+                      <b>{iName(l.item)}</b>
+                      {l.spice != null && (
+                        <p className="muted">{l.spice ? t("spiceHot") : t("spiceNormal")}</p>
+                      )}
                       {l.addons.map((a) => (
                         <p key={a.id} className="muted">
-                          + {a.name} ({money(a.price)})
+                          + {iName(a)} ({money(a.price)})
                         </p>
                       ))}
-                      <p className="muted">سعر الوحدة: {money(l.unit)}</p>
+                      <p className="muted">{t("unitPrice", { p: money(l.unit) })}</p>
                       <div className="qty">
                         <button
-                          aria-label={"تقليل " + l.item.name}
+                          aria-label={t("decrease", { x: iName(l.item) })}
                           onClick={() => change(l.key, -1)}
                         >
                           −
                         </button>
                         <span>{l.qty}</span>
                         <button
-                          aria-label={"زيادة " + l.item.name}
+                          aria-label={t("increase", { x: iName(l.item) })}
                           onClick={() => change(l.key, 1)}
                         >
                           +
@@ -668,19 +708,19 @@ export function Menu({ data }) {
                           setCart((c) => c.filter((x) => x.key !== l.key))
                         }
                       >
-                        حذف
+                        {t("remove")}
                       </button>
                     </div>
                   </div>
                 ))}
               </div>
               <div className="total">
-                <span>إجمالي الأصناف</span>
+                <span>{t("itemsTotal")}</span>
                 <b>{money(total)}</b>
               </div>
               <p className="notice">{s.deliveryDisclaimer}</p>
               <form onSubmit={checkout}>
-                <h3>تفاصيل الطلب</h3>
+                <h3>{t("orderDetails")}</h3>
                 <div className="order-types">
                   <label className={!s.deliveryEnabled ? "disabled" : ""}>
                     <input
@@ -694,7 +734,7 @@ export function Menu({ data }) {
                       }
                     />
                     {s.deliveryLabel}
-                    {!s.deliveryEnabled && " (غير متاح حالياً)"}
+                    {!s.deliveryEnabled && t("unavailableNow")}
                   </label>
                   <label className={!s.dineInEnabled ? "disabled" : ""}>
                     <input
@@ -708,7 +748,7 @@ export function Menu({ data }) {
                       }
                     />
                     {s.dineInLabel}
-                    {!s.dineInEnabled && " (غير متاح حالياً)"}
+                    {!s.dineInEnabled && t("unavailableNow")}
                   </label>
                 </div>
                 {[
@@ -744,9 +784,9 @@ export function Menu({ data }) {
                   </label>
                 )}
                 <p className="muted">
-                  هنفتح واتساب برسالة جاهزة. لازم تضغط إرسال هناك.{" "}
+                  {t("waNote")}{" "}
                   {s.clearCart
-                    ? "السلة هتفضى بمجرد الضغط على متابعة، حتى لو واتساب ما فتحش. ده مش تأكيد استلام الطلب."
+                    ? t("clearNote")
                     : ""}
                 </p>
                 {error && (
@@ -758,16 +798,16 @@ export function Menu({ data }) {
                   className="primary full"
                   disabled={!s.deliveryEnabled && !s.dineInEnabled}
                 >
-                  متابعة على واتساب ↗
+                  {t("continueWa")}
                 </button>
               </form>
             </>
           ) : (
             <div className="empty">
-              <h3>سلتك فاضية</h3>
-              <p>اختار حاجة حلوة من المنيو.</p>
+              <h3>{t("emptyCart")}</h3>
+              <p>{t("emptyCartText")}</p>
               <button className="primary" onClick={() => setOpen(false)}>
-                ارجع للمنيو
+                {t("backMenu")}
               </button>
             </div>
           )}

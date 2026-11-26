@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 
-export function Modal({ title, children, onClose }) {
+export function Modal({ title, children, onClose, closeLabel = "إغلاق" }) {
   let r = useRef();
   useEffect(() => {
     r.current.showModal();
@@ -22,7 +22,7 @@ export function Modal({ title, children, onClose }) {
     >
       <div className="modal-head">
         <h2>{title}</h2>
-        <button className="icon" aria-label="إغلاق" onClick={onClose}>
+        <button className="icon" aria-label={closeLabel} onClick={onClose}>
           <svg viewBox="0 0 14 14" width="15" height="15" aria-hidden="true">
             <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" />
           </svg>

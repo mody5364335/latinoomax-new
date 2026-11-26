@@ -126,5 +126,34 @@ input[type=radio]:disabled,input[type=checkbox]:disabled{opacity:.4;cursor:not-a
 .check.size:has(input:checked){background:#3a2616;border-color:#f3cf7a;box-shadow:0 0 0 1px #e8b04a66}
 .order-types label:has(input:checked){border-color:#e8b04a;background:#3a2616}
 .check.size input,.check input{width:22px;height:22px}
+
+/* v15: language toggle + opening hours */
+.lang-toggle{background:transparent;color:var(--orange);border:1px solid var(--orange);border-radius:10px;padding:8px 14px;font-weight:800;font-size:12px;white-space:nowrap}
+.lang-toggle:hover{background:#e8b04a22}
+.hours{margin-top:24px;padding:20px 22px;background:#231710;border:1px solid var(--line);border-radius:16px}
+.hours h3{margin:0 0 10px;font-size:16px}
+.hours table{width:100%;border-collapse:collapse;font-size:13px}
+.hours th,.hours td{padding:8px 10px;text-align:start;border-bottom:1px solid var(--line);vertical-align:top}
+.hours th{font-weight:800;color:var(--orange);width:34%}
+.hours tr:last-child td{border-bottom:0}
+.hours small{color:var(--muted);font-size:11px}
+.hours p{margin:10px 0 0}
+@media(max-width:700px){.hours{padding:16px}.hours th,.hours td{padding:7px 6px;font-size:12px}}
+
+.hours td small{display:block}
+.offer-arrow.offer-prev:before{transform:translateX(var(--nx,-3.25px)) rotate(45deg)}
+.offer-arrow.offer-next:before{transform:translateX(var(--px,3.25px)) rotate(-135deg)}
+
+/* LTR (English) overrides. Arabic/RTL rules above are untouched. */
+html[dir=ltr] .offer-arrow.offer-prev:before{transform:translateX(var(--px,3.25px)) rotate(-135deg)}
+html[dir=ltr] .offer-arrow.offer-next:before{transform:translateX(var(--nx,-3.25px)) rotate(45deg)}
+html[dir=ltr] .categories button,html[dir=ltr] .detail-link,html[dir=ltr] .feature-card,html[dir=ltr] td,html[dir=ltr] th{text-align:left}
+html[dir=ltr] .cart-line>div:last-child{text-align:right}
+html[dir=ltr] .feature-card>img,html[dir=ltr] .feature-card>.placeholder{inset:0 0 0 35%!important}
+html[dir=ltr] .feature-card:after{background:linear-gradient(90deg,#1d130c 5%,#1d130ce8 34%,#1d130c22 100%)!important}
+html[dir=ltr] .offer-spark{left:auto;right:16px}
+html[dir=ltr] .badge{right:auto;left:12px}
+html[dir=ltr] .floating b{margin-right:0;margin-left:8px}
+
 /* v14.2: add-to-cart stays visible while scrolling add-ons in the item dialog; white label and price on the same orange */
 dialog .accent.full{position:sticky;bottom:0;z-index:2;color:#fff!important;box-shadow:0 -14px 22px 6px #1c130d,0 6px 24px #0006}

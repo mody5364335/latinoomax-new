@@ -17,3 +17,11 @@ export const categoryRank = (category) => {
 
 // كل أقسام البيتزا (وسط / كبير / حبة كاملة) بتظهر تحت زرار واحد اسمه "البيتزا".
 export const catKey = (item) => /^بيتزا |^البيتزا$/.test(item.category) ? "البيتزا" : item.category;
+
+// اختيار الشطة (عادي/حار): على الأكل والشوربة فقط — المقبلات والسلاطات والإضافات والتوصيل من غير الاختيار (محمد 26 نوفمبر 2026)
+const noSpiceCategories = new Set(["مقبلات", "سلاطات", "اضافات فود", "توصيل"]);
+export const hasSpice = (item) => sectionOf(item) === "main" && !noSpiceCategories.has(catKey(item));
+
+// أصناف حارة بطبيعتها: الاختيار يبدأ على حار (قائمة محمد المؤكدة 26 نوفمبر 2026)
+const spicyNames = new Set(["تشيلى برجر", "زنجر شيلي البيتزا وسط", "زنجر تشيلي البيتزا كبير", "لاتينو تشيلي فرايز ماكس", "موتزاريلا ستيكس هالبينو", "هالبينو فريش", "ارابياتا"]);
+export const spicyDefault = (item) => spicyNames.has(item.name);
