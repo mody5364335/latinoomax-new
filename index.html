@@ -647,6 +647,20 @@ dialog::backdrop{background:#0f0805cc}
 .contacts,footer,.credit{border-color:#4a3320}
 input:not([type=checkbox]):not([type=radio]),textarea,select{background:#170f0a;border-color:#5a4028}
 .toast{background:#e8b04a}
+/* v14.1: visible selected state for radio/checkbox */
+input[type=radio],input[type=checkbox]{-webkit-appearance:none;appearance:none;width:22px;height:22px;flex-shrink:0;margin:0;background:#120c08;border:2px solid #8a6a3e;display:inline-grid;place-content:center;cursor:pointer;transition:background .15s,border-color .15s}
+input[type=radio]{border-radius:50%}
+input[type=checkbox]{border-radius:6px}
+input[type=radio]::after{content:"";width:10px;height:10px;border-radius:50%;background:#1a0f08;transform:scale(0);transition:transform .15s}
+input[type=checkbox]::after{content:"";width:6px;height:11px;border:solid #1a0f08;border-width:0 3px 3px 0;transform:translateY(-1px) rotate(45deg) scale(0);transition:transform .15s}
+input[type=radio]:checked,input[type=checkbox]:checked{background:#e8b04a;border-color:#f3cf7a;box-shadow:0 0 0 3px #e8b04a33}
+input[type=radio]:checked::after{transform:scale(1)}
+input[type=checkbox]:checked::after{transform:translateY(-1px) rotate(45deg) scale(1)}
+input[type=radio]:disabled,input[type=checkbox]:disabled{opacity:.4;cursor:not-allowed}
+.check:has(input:checked){color:#fff3de}
+.check.size:has(input:checked){background:#3a2616;border-color:#f3cf7a;box-shadow:0 0 0 1px #e8b04a66}
+.order-types label:has(input:checked){border-color:#e8b04a;background:#3a2616}
+.check.size input,.check input{width:22px;height:22px}
 
 </style>
 </head><body><div id="root"></div></body></html>
