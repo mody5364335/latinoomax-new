@@ -221,9 +221,6 @@ export function Menu({ data }) {
           <span className="brand-plaque">
             <img className="brand-logo" src={brandLogo} alt={s.brand} />
           </span>
-          <span className="brand-tagline">
-            لاتينو ماكس<small>طعم على مزاجك</small>
-          </span>
         </a>
         <Greeting />
         <button className="primary" onClick={() => setOpen(true)}>
@@ -483,7 +480,7 @@ export function Menu({ data }) {
         </section>
       )}
       <footer>
-        <b>{s.brand}</b>
+        <b className="foot-brand"><img className="foot-mark" src={bullMark} alt="" aria-hidden="true" />{s.brand}</b>
         <p>
           الأسعار بالجنيه المصري ولا تشمل رسوم التوصيل. بعض الصور خاصة بالقسم
           وليست بالصنف.
